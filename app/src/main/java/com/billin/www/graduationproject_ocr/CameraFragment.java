@@ -1,6 +1,7 @@
 package com.billin.www.graduationproject_ocr;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -36,12 +37,15 @@ import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
+
+import com.billin.www.graduationproject_ocr.dialog.ErrorDialog;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -189,38 +193,13 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
      */
     private boolean mFlashSupported;
 
+    private boolean mTouchFocusSupported;
+
 
     /**
      * Orientation of the camera sensor
      */
     private int mSensorOrientation;
-    /**
-     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
-     * {@link TextureView}.
-     */
-    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
-            = new TextureView.SurfaceTextureListener() {
-
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
-            openCamera(width, height);
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
-            configureTransform(width, height);
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
-            return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
-        }
-
-    };
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
      */
@@ -340,6 +319,33 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             if (null != activity) {
                 activity.finish();
             }
+        }
+
+    };
+    /**
+     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
+     * {@link TextureView}.
+     */
+    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
+            = new TextureView.SurfaceTextureListener() {
+
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
+            openCamera(width, height);
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
+            configureTransform(width, height);
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
         }
 
     };
@@ -522,8 +528,6 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                 Size largest = Collections.max(
                         Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
                         new CompareSizesByArea());
-                largest = map.getOutputSizes(ImageFormat.JPEG)[1];
-                Log.d(TAG, "setUpCameraOutputs: " + Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)).toString());
                 mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
                         ImageFormat.JPEG, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener(
@@ -597,9 +601,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                     mTextureView.setAspectRatio(mPreviewSize.getHeight(), mPreviewSize.getWidth());
                 }
 
-                // Check if the flash is supported.
-                Boolean available = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
-                mFlashSupported = available == null ? false : available;
+                checkCharacteristicSupport(characteristics);
 
                 mCameraId = cameraId;
                 return;
@@ -612,6 +614,76 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             ErrorDialog.newInstance(getString(R.string.camera_error))
                     .show(getChildFragmentManager(), FRAGMENT_DIALOG);
         }
+    }
+
+    private void checkCharacteristicSupport(CameraCharacteristics characteristics) {
+        // Check if the flash is supported.
+        Boolean available = characteristics.get(CameraCharacteristics.FLASH_INFO_AVAILABLE);
+        mFlashSupported = available == null ? false : available;
+
+        // Check touch focus is supported
+        Integer maxRegionsAf;
+        if ((maxRegionsAf = characteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF)) != null &&
+                maxRegionsAf >= 1) {
+            mTouchFocusSupported = true;
+        }
+    }
+
+    /**
+     * Configures the necessary {@link Matrix} transformation to `mTextureView`.
+     * This method should be called after the camera preview size is determined in
+     * setUpCameraOutputs and also the size of `mTextureView` is fixed.
+     *
+     * @param viewWidth  The width of `mTextureView`
+     * @param viewHeight The height of `mTextureView`
+     */
+    private void configureTransform(int viewWidth, int viewHeight) {
+        Activity activity = getActivity();
+        if (null == mTextureView || null == mPreviewSize || null == activity) {
+            return;
+        }
+
+        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+
+        Matrix matrix = new Matrix();
+
+        RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
+        RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
+
+        float centerX = viewRect.centerX();
+        float centerY = viewRect.centerY();
+
+        bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
+        matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+        float scale;
+
+        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
+            scale = Math.min(
+                    (float) viewHeight / mPreviewSize.getHeight(),
+                    (float) viewWidth / mPreviewSize.getWidth());
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
+
+            matrix.postTranslate(-(viewWidth - mPreviewSize.getWidth() * scale) / 2, 0);
+        } else if (Surface.ROTATION_180 == rotation) {
+            scale = Math.min(
+                    (float) viewHeight / mPreviewSize.getWidth(),
+                    (float) viewWidth / mPreviewSize.getHeight());
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(180, centerX, centerY);
+
+            matrix.postTranslate(0, -(viewHeight - mPreviewSize.getWidth() * scale) / 2);
+        } else {
+            scale = Math.min(
+                    (float) viewHeight / mPreviewSize.getWidth(),
+                    (float) viewWidth / mPreviewSize.getHeight());
+            matrix.postScale(scale, scale, centerX, centerY);
+
+            // 移动到顶部
+            matrix.postTranslate(0, -(viewHeight - mPreviewSize.getWidth() * scale) / 2);
+        }
+
+        mTextureView.setTransform(matrix);
     }
 
     /**
@@ -677,24 +749,46 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
     }
 
     /**
-     * Starts a background thread and its {@link Handler}.
+     * Initiate a still image capture.
      */
-    private void startBackgroundThread() {
-        mBackgroundThread = new HandlerThread("CameraBackground");
-        mBackgroundThread.start();
-        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    private void takePicture() {
+        lockFocus();
     }
 
     /**
-     * Stops the background thread and its {@link Handler}.
+     * Lock the focus as the first step for a still image capture.
      */
-    private void stopBackgroundThread() {
-        mBackgroundThread.quitSafely();
+    private void lockFocus() {
         try {
-            mBackgroundThread.join();
-            mBackgroundThread = null;
-            mBackgroundHandler = null;
-        } catch (InterruptedException e) {
+            // This is how to tell the camera to lock focus.
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                    CameraMetadata.CONTROL_AF_TRIGGER_START);
+            // Tell #mCaptureCallback to wait for the lock.
+            mState = STATE_WAITING_LOCK;
+            mCameraSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
+                    mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Unlock the focus. This method should be called when still image capture sequence is
+     * finished.
+     */
+    private void unlockFocus() {
+        try {
+            // Reset the auto-focus trigger
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                    CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+            setAutoFlash(mPreviewRequestBuilder);
+            mCameraSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
+                    mBackgroundHandler);
+            // After this, the camera will go back to the normal state of preview.
+            mState = STATE_PREVIEW;
+            mCameraSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,
+                    mBackgroundHandler);
+        } catch (CameraAccessException e) {
             e.printStackTrace();
         }
     }
@@ -735,6 +829,32 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                                 // Auto focus should be continuous for camera preview.
                                 mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                                         CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+
+                                // add touch focus
+                                mTextureView.setOnTouchListener(new View.OnTouchListener() {
+                                    @SuppressLint("ClickableViewAccessibility")
+                                    @Override
+                                    public boolean onTouch(View v, MotionEvent event) {
+                                        if (MotionEvent.ACTION_DOWN != event.getActionMasked()) {
+                                            return false;
+                                        }
+
+                                        //TODO: here I just flip x,y, but this needs to correspond with the sensor orientation (via SENSOR_ORIENTATION)
+                                        final int x = (int) ((event.getY() / (float) mTextureView.getHeight()) * (float) mPreviewSize.getWidth());
+                                        final int y = (int) ((event.getX() / (float) mTextureView.getWidth()) * (float) mPreviewSize.getHeight());
+                                        final int halfTouchWidth = 150; //(int)motionEvent.getTouchMajor(); //TODO: this doesn't represent actual touch size in pixel. Values range in [3, 10]...
+                                        final int halfTouchHeight = 150; //(int)motionEvent.getTouchMinor();
+//                                        MeteringRectangle focusAreaTouch = new MeteringRectangle(Math.max(x - halfTouchWidth, 0),
+//                                                Math.max(y - halfTouchHeight, 0),
+//                                                halfTouchWidth * 2,
+//                                                halfTouchHeight * 2,
+//                                                MeteringRectangle.METERING_WEIGHT_MAX - 1);
+
+
+                                        return true;
+                                    }
+                                });
+
                                 // Flash is automatically enabled when necessary.
                                 setAutoFlash(mPreviewRequestBuilder);
 
@@ -754,87 +874,6 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                         }
                     }, null
             );
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Configures the necessary {@link Matrix} transformation to `mTextureView`.
-     * This method should be called after the camera preview size is determined in
-     * setUpCameraOutputs and also the size of `mTextureView` is fixed.
-     *
-     * @param viewWidth  The width of `mTextureView`
-     * @param viewHeight The height of `mTextureView`
-     */
-    private void configureTransform(int viewWidth, int viewHeight) {
-        Activity activity = getActivity();
-        if (null == mTextureView || null == mPreviewSize || null == activity) {
-            return;
-        }
-
-        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-
-        Matrix matrix = new Matrix();
-
-        RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
-        RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
-
-        float centerX = viewRect.centerX();
-        float centerY = viewRect.centerY();
-
-        bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
-        matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
-        float scale;
-
-        if (Surface.ROTATION_90 == rotation || Surface.ROTATION_270 == rotation) {
-            scale = Math.min(
-                    (float) viewHeight / mPreviewSize.getHeight(),
-                    (float) viewWidth / mPreviewSize.getWidth());
-            matrix.postScale(scale, scale, centerX, centerY);
-            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
-
-            matrix.postTranslate(-(viewWidth - mPreviewSize.getWidth() * scale) / 2, 0);
-        } else if (Surface.ROTATION_180 == rotation) {
-            scale = Math.min(
-                    (float) viewHeight / mPreviewSize.getWidth(),
-                    (float) viewWidth / mPreviewSize.getHeight());
-            matrix.postScale(scale, scale, centerX, centerY);
-            matrix.postRotate(180, centerX, centerY);
-
-            matrix.postTranslate(0, -(viewHeight - mPreviewSize.getWidth() * scale) / 2);
-        } else {
-            scale = Math.min(
-                    (float) viewHeight / mPreviewSize.getWidth(),
-                    (float) viewWidth / mPreviewSize.getHeight());
-            matrix.postScale(scale, scale, centerX, centerY);
-
-            // 移动到顶部
-            matrix.postTranslate(0, -(viewHeight - mPreviewSize.getWidth() * scale) / 2);
-        }
-
-        mTextureView.setTransform(matrix);
-    }
-
-    /**
-     * Initiate a still image capture.
-     */
-    private void takePicture() {
-        lockFocus();
-    }
-
-    /**
-     * Lock the focus as the first step for a still image capture.
-     */
-    private void lockFocus() {
-        try {
-            // This is how to tell the camera to lock focus.
-            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-                    CameraMetadata.CONTROL_AF_TRIGGER_START);
-            // Tell #mCaptureCallback to wait for the lock.
-            mState = STATE_WAITING_LOCK;
-            mCameraSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
-                    mBackgroundHandler);
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -917,31 +956,33 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
         return (ORIENTATIONS.get(rotation) + mSensorOrientation + 270) % 360;
     }
 
-    /**
-     * Unlock the focus. This method should be called when still image capture sequence is
-     * finished.
-     */
-    private void unlockFocus() {
-        try {
-            // Reset the auto-focus trigger
-            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
-                    CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
-            setAutoFlash(mPreviewRequestBuilder);
-            mCameraSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback,
-                    mBackgroundHandler);
-            // After this, the camera will go back to the normal state of preview.
-            mState = STATE_PREVIEW;
-            mCameraSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback,
-                    mBackgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void setAutoFlash(CaptureRequest.Builder requestBuilder) {
         if (mFlashSupported) {
             requestBuilder.set(CaptureRequest.CONTROL_AE_MODE,
                     CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+        }
+    }
+
+    /**
+     * Starts a background thread and its {@link Handler}.
+     */
+    private void startBackgroundThread() {
+        mBackgroundThread = new HandlerThread("CameraBackground");
+        mBackgroundThread.start();
+        mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
+    }
+
+    /**
+     * Stops the background thread and its {@link Handler}.
+     */
+    private void stopBackgroundThread() {
+        mBackgroundThread.quitSafely();
+        try {
+            mBackgroundThread.join();
+            mBackgroundThread = null;
+            mBackgroundHandler = null;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
@@ -1004,38 +1045,6 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
     }
 
     /**
-     * Shows an error message dialog.
-     */
-    public static class ErrorDialog extends DialogFragment {
-
-        private static final String ARG_MESSAGE = "message";
-
-        public static ErrorDialog newInstance(String message) {
-            ErrorDialog dialog = new ErrorDialog();
-            Bundle args = new Bundle();
-            args.putString(ARG_MESSAGE, message);
-            dialog.setArguments(args);
-            return dialog;
-        }
-
-        @NonNull
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            final Activity activity = getActivity();
-            return new AlertDialog.Builder(activity)
-                    .setMessage(getArguments().getString(ARG_MESSAGE))
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            activity.finish();
-                        }
-                    })
-                    .create();
-        }
-
-    }
-
-    /**
      * Shows OK/Cancel confirmation dialog about camera permission.
      */
     public static class ConfirmationDialog extends DialogFragment {
@@ -1066,5 +1075,4 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                     .create();
         }
     }
-
 }
