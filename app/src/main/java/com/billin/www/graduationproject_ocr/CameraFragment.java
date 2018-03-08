@@ -12,6 +12,7 @@ import android.content.res.Configuration;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -23,6 +24,7 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
+import android.hardware.camera2.params.MeteringRectangle;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
@@ -46,6 +48,7 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.billin.www.graduationproject_ocr.dialog.ErrorDialog;
+import com.billin.www.graduationproject_ocr.util.AutoFocusHelper;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -201,6 +204,33 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
      */
     private int mSensorOrientation;
     /**
+     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
+     * {@link TextureView}.
+     */
+    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
+            = new TextureView.SurfaceTextureListener() {
+
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
+            openCamera(width, height);
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
+            configureTransform(width, height);
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
+        }
+
+    };
+    /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
      */
     private CameraCaptureSession.CaptureCallback mCaptureCallback
@@ -319,33 +349,6 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             if (null != activity) {
                 activity.finish();
             }
-        }
-
-    };
-    /**
-     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
-     * {@link TextureView}.
-     */
-    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
-            = new TextureView.SurfaceTextureListener() {
-
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
-            openCamera(width, height);
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
-            configureTransform(width, height);
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
-            return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
         }
 
     };
@@ -839,17 +842,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                                             return false;
                                         }
 
-                                        //TODO: here I just flip x,y, but this needs to correspond with the sensor orientation (via SENSOR_ORIENTATION)
-                                        final int x = (int) ((event.getY() / (float) mTextureView.getHeight()) * (float) mPreviewSize.getWidth());
-                                        final int y = (int) ((event.getX() / (float) mTextureView.getWidth()) * (float) mPreviewSize.getHeight());
-                                        final int halfTouchWidth = 150; //(int)motionEvent.getTouchMajor(); //TODO: this doesn't represent actual touch size in pixel. Values range in [3, 10]...
-                                        final int halfTouchHeight = 150; //(int)motionEvent.getTouchMinor();
-//                                        MeteringRectangle focusAreaTouch = new MeteringRectangle(Math.max(x - halfTouchWidth, 0),
-//                                                Math.max(y - halfTouchHeight, 0),
-//                                                halfTouchWidth * 2,
-//                                                halfTouchHeight * 2,
-//                                                MeteringRectangle.METERING_WEIGHT_MAX - 1);
-
+                                        triggerFocusArea(event.getX(), event.getY());
 
                                         return true;
                                     }
@@ -876,6 +869,42 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             );
         } catch (CameraAccessException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void triggerFocusArea(float x, float y) {
+        CameraManager manager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
+        try {
+            CameraCharacteristics characteristics
+                    = manager.getCameraCharacteristics(mCameraId);
+            Integer sensorOrientation = characteristics.get(
+                    CameraCharacteristics.SENSOR_ORIENTATION);
+
+            sensorOrientation = sensorOrientation == null ? 0 : sensorOrientation;
+
+            Rect cropRegion = AutoFocusHelper.cropRegionForZoom(characteristics, 1f);
+            MeteringRectangle[] mAERegions = AutoFocusHelper.aeRegionsForNormalizedCoord(x, y, cropRegion, sensorOrientation);
+            MeteringRectangle[] mAFRegions = AutoFocusHelper.afRegionsForNormalizedCoord(x, y, cropRegion, sensorOrientation);
+            Log.d(TAG, "triggerFocusArea: " + Arrays.toString(mAFRegions));
+
+            // Step 1: Request single frame CONTROL_AF_TRIGGER_START.
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+            mCameraSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
+
+            //Now add a new AF trigger with focus region
+            if (mTouchFocusSupported) {
+                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, mAFRegions);
+            }
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+            mPreviewRequestBuilder.setTag("FOCUS_TAG"); //we'll capture this later for resuming the preview
+
+            mCameraSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
+
+        } catch (CameraAccessException ex) {
+            Log.e(TAG, "Could not execute preview request.", ex);
         }
     }
 

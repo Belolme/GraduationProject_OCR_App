@@ -25,6 +25,7 @@ import android.view.TextureView;
  */
 public class AutoFitTextureView extends TextureView {
 
+    private static final String TAG = "AutoFitTextureView";
     private int mRatioWidth = 0;
     private int mRatioHeight = 0;
 
@@ -59,7 +60,7 @@ public class AutoFitTextureView extends TextureView {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+//        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = MeasureSpec.getSize(heightMeasureSpec);
         if (0 == mRatioWidth || 0 == mRatioHeight) {
