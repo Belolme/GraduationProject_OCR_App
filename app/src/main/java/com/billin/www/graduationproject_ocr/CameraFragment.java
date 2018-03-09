@@ -212,6 +212,33 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
      */
     private int mSensorOrientation;
     /**
+     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
+     * {@link TextureView}.
+     */
+    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
+            = new TextureView.SurfaceTextureListener() {
+
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
+            openCamera(width, height);
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
+            configureTransform(width, height);
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
+        }
+
+    };
+    /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
      */
     private CameraCaptureSession.CaptureCallback mCaptureCallback
@@ -352,33 +379,6 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             if (null != activity) {
                 activity.finish();
             }
-        }
-
-    };
-    /**
-     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
-     * {@link TextureView}.
-     */
-    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
-            = new TextureView.SurfaceTextureListener() {
-
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
-            openCamera(width, height);
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
-            configureTransform(width, height);
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
-            return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
         }
 
     };
@@ -913,14 +913,16 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
 
             // 这里并没有进行放大缩小的操作
             Rect cropRegion = AutoFocusHelper.cropRegionForZoom(characteristics, 1f);
+            int rotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
+            rotation *= 90;
             MeteringRectangle[] mAERegions = AutoFocusHelper.aeRegionsForNormalizedCoordinator(
                     x / mTextureView.getWidth(),
                     y / mTextureView.getHeight(),
-                    cropRegion, sensorOrientation);
+                    cropRegion, sensorOrientation, rotation);
             final MeteringRectangle[] mAFRegions = AutoFocusHelper.afRegionsForNormalizedCoordinator(
                     x / mTextureView.getWidth(),
                     y / mTextureView.getHeight(),
-                    cropRegion, sensorOrientation);
+                    cropRegion, sensorOrientation, rotation);
 
             //first stop the existing repeating request
             mCameraSession.stopRepeating();

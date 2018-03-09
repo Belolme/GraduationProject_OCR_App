@@ -54,7 +54,24 @@ public class CameraUtil {
     }
 
     public static PointF normalizedSensorCoordsForNormalizedDisplayCoords(
-            float nx, float ny, int sensorOrientation) {
+            float nx, float ny, int sensorOrientation, int displayOrientation) {
+
+        // 转换屏幕方向坐标回到正常的竖直屏幕坐标
+        switch (displayOrientation) {
+            case 90:
+                sensorOrientation += 270;
+                break;
+
+            case 270:
+                sensorOrientation += 90;
+                break;
+
+            case 180:
+                sensorOrientation += 180;
+                break;
+        }
+        sensorOrientation %= 360;
+
         switch (sensorOrientation) {
             case 0:
                 return new PointF(nx, ny);
@@ -64,9 +81,9 @@ public class CameraUtil {
                 return new PointF(1.0f - nx, 1.0f - ny);
             case 270:
                 return new PointF(1.0f - ny, nx);
-            default:
-                throw new RuntimeException("camera sensor orientation is invalidate");
         }
+
+        throw new RuntimeException("camera sensor orientation is invalidate");
     }
 
     /**

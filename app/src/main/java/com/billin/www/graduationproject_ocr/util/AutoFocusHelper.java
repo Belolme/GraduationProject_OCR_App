@@ -94,7 +94,8 @@ public class AutoFocusHelper {
     public static MeteringRectangle[] regionsForNormalizedCoordinator(float nx, float ny,
                                                                       float fraction,
                                                                       final Rect cropRegion,
-                                                                      int sensorOrientation) {
+                                                                      int sensorOrientation,
+                                                                      int displayOrientation) {
         // Compute half side length in pixels.
         int minCropEdge = Math.min(cropRegion.width(), cropRegion.height());
         int halfSideLength = (int) (0.5f * fraction * minCropEdge);
@@ -105,7 +106,7 @@ public class AutoFocusHelper {
 
         // Normalized coordinates, now rotated into sensor space.
         PointF nsc = CameraUtil.normalizedSensorCoordsForNormalizedDisplayCoords(
-                nx, ny, sensorOrientation);
+                nx, ny, sensorOrientation, displayOrientation);
 
         int xCenterSensor = (int) (cropRegion.left + nsc.x * cropRegion.width());
         int yCenterSensor = (int) (cropRegion.top + nsc.y * cropRegion.height());
@@ -138,9 +139,10 @@ public class AutoFocusHelper {
     public static MeteringRectangle[] aeRegionsForNormalizedCoordinator(float nx,
                                                                         float ny,
                                                                         final Rect cropRegion,
-                                                                        int sensorOrientation) {
+                                                                        int sensorOrientation,
+                                                                        int displayOrientation) {
         return regionsForNormalizedCoordinator(nx, ny, AE_REGION_BOX,
-                cropRegion, sensorOrientation);
+                cropRegion, sensorOrientation, displayOrientation);
     }
 
     /**
@@ -156,8 +158,9 @@ public class AutoFocusHelper {
     public static MeteringRectangle[] afRegionsForNormalizedCoordinator(float nx,
                                                                         float ny,
                                                                         final Rect cropRegion,
-                                                                        int sensorOrientation) {
+                                                                        int sensorOrientation,
+                                                                        int displayOrientation) {
         return regionsForNormalizedCoordinator(nx, ny, AF_REGION_BOX,
-                cropRegion, sensorOrientation);
+                cropRegion, sensorOrientation, displayOrientation);
     }
 }
