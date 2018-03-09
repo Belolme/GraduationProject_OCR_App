@@ -49,6 +49,8 @@ import android.widget.Toast;
 
 import com.billin.www.graduationproject_ocr.dialog.ErrorDialog;
 import com.billin.www.graduationproject_ocr.util.AutoFocusHelper;
+import com.billin.www.graduationproject_ocr.view.AutoFitTextureView;
+import com.billin.www.graduationproject_ocr.view.TouchFocusFeedbackView;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -124,6 +126,8 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
     }
 
     private Button mCaptureButton;
+
+    private TouchFocusFeedbackView mTouchButton;
 
     private CameraPresenter mPresenter;
 
@@ -203,38 +207,10 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
 
     private boolean mTouchFocusSupported;
 
-
     /**
      * Orientation of the camera sensor
      */
     private int mSensorOrientation;
-    /**
-     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
-     * {@link TextureView}.
-     */
-    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
-            = new TextureView.SurfaceTextureListener() {
-
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
-            openCamera(width, height);
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
-            configureTransform(width, height);
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
-            return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
-        }
-
-    };
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
      */
@@ -264,6 +240,8 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                         } catch (CameraAccessException e) {
                             e.printStackTrace();
                         }
+
+                        mState = STATE_PREVIEW;
                     }
                     break;
                 }
@@ -374,6 +352,33 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             if (null != activity) {
                 activity.finish();
             }
+        }
+
+    };
+    /**
+     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
+     * {@link TextureView}.
+     */
+    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
+            = new TextureView.SurfaceTextureListener() {
+
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
+            openCamera(width, height);
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
+            configureTransform(width, height);
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
         }
 
     };
@@ -489,6 +494,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         mCaptureButton = view.findViewById(R.id.camera_capture_btn);
         mTextureView = view.findViewById(R.id.camera_texture);
+        mTouchButton = view.findViewById(R.id.camera_touch_btn);
 
         mCaptureButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -868,6 +874,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                                         }
 
                                         triggerFocusArea(event.getX(), event.getY());
+                                        mTouchButton.animateTouchTarget(event.getX(), event.getY());
 
                                         return true;
                                     }

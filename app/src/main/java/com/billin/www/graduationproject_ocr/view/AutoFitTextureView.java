@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.billin.www.graduationproject_ocr;
+package com.billin.www.graduationproject_ocr.view;
 
 import android.content.Context;
 import android.util.AttributeSet;
