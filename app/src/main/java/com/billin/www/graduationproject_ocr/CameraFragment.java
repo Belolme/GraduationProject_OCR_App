@@ -102,6 +102,11 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
     private static final int STATE_PICTURE_TAKEN = 4;
 
     /**
+     * Camera state: touch focus is triggered
+     */
+    private static final int STATE_TOUCH_FOCUS = 5;
+
+    /**
      * Max preview width that is guaranteed by Camera2 API
      */
     private static final int MAX_PREVIEW_WIDTH = 1920;
@@ -240,6 +245,26 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             switch (mState) {
                 case STATE_PREVIEW: {
                     // We have nothing to do when the camera preview is working normally.
+                    break;
+                }
+
+                case STATE_TOUCH_FOCUS: {
+                    // we set repeat preview again
+                    Integer afState;
+                    if ((afState = result.get(CaptureResult.CONTROL_AF_STATE)) != null &&
+                            afState == CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED) {
+
+                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER,
+                                CaptureResult.CONTROL_AF_TRIGGER_CANCEL);
+                        mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
+                                CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO);
+                        try {
+                            mCameraSession.setRepeatingRequest(mPreviewRequestBuilder.build(),
+                                    this, mBackgroundHandler);
+                        } catch (CameraAccessException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     break;
                 }
 
@@ -873,21 +898,27 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
     }
 
     private void triggerFocusArea(float x, float y) {
-        CameraManager manager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         try {
-            CameraCharacteristics characteristics
-                    = manager.getCameraCharacteristics(mCameraId);
-            Integer sensorOrientation = characteristics.get(
-                    CameraCharacteristics.SENSOR_ORIENTATION);
+            CameraCharacteristics characteristics = mCameraManager.getCameraCharacteristics(mCameraId);
 
+            Integer sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
             sensorOrientation = sensorOrientation == null ? 0 : sensorOrientation;
 
+            // 这里并没有进行放大缩小的操作
             Rect cropRegion = AutoFocusHelper.cropRegionForZoom(characteristics, 1f);
-            MeteringRectangle[] mAERegions = AutoFocusHelper.aeRegionsForNormalizedCoord(x, y, cropRegion, sensorOrientation);
-            MeteringRectangle[] mAFRegions = AutoFocusHelper.afRegionsForNormalizedCoord(x, y, cropRegion, sensorOrientation);
-            Log.d(TAG, "triggerFocusArea: " + Arrays.toString(mAFRegions));
+            MeteringRectangle[] mAERegions = AutoFocusHelper.aeRegionsForNormalizedCoordinator(
+                    x / mTextureView.getWidth(),
+                    y / mTextureView.getHeight(),
+                    cropRegion, sensorOrientation);
+            final MeteringRectangle[] mAFRegions = AutoFocusHelper.afRegionsForNormalizedCoordinator(
+                    x / mTextureView.getWidth(),
+                    y / mTextureView.getHeight(),
+                    cropRegion, sensorOrientation);
 
-            // Step 1: Request single frame CONTROL_AF_TRIGGER_START.
+            //first stop the existing repeating request
+            mCameraSession.stopRepeating();
+
+            //cancel any existing AF trigger (repeated touches, etc.)
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
             mCameraSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
@@ -895,13 +926,16 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             //Now add a new AF trigger with focus region
             if (mTouchFocusSupported) {
                 mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_REGIONS, mAFRegions);
+                mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_REGIONS, mAERegions);
             }
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
             mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-            mPreviewRequestBuilder.setTag("FOCUS_TAG"); //we'll capture this later for resuming the preview
 
-            mCameraSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
+            mState = STATE_TOUCH_FOCUS;
+
+            //then we ask for a single request (not repeating!)
+            mCameraSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
 
         } catch (CameraAccessException ex) {
             Log.e(TAG, "Could not execute preview request.", ex);

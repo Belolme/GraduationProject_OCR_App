@@ -47,6 +47,8 @@ public class AutoFocusHelper {
      */
     private static final float AE_REGION_BOX = 0.3f;
 
+    private static final String TAG = "AutoFocusHelper";
+
     /**
      * camera2 API metering region weight.
      */
@@ -73,15 +75,26 @@ public class AutoFocusHelper {
      */
     public static Rect cropRegionForZoom(CameraCharacteristics characteristics, float zoom) {
         Rect sensor = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+
+        if (sensor == null)
+            return null;
+
         int xCenter = sensor.width() / 2;
         int yCenter = sensor.height() / 2;
         int xDelta = (int) (0.5f * sensor.width() / zoom);
         int yDelta = (int) (0.5f * sensor.height() / zoom);
-        return new Rect(xCenter - xDelta, yCenter - yDelta, xCenter + xDelta, yCenter + yDelta);
+
+        return new Rect(xCenter - xDelta,
+                yCenter - yDelta,
+                xCenter + xDelta,
+                yCenter + yDelta);
     }
 
-    public static MeteringRectangle[] regionsForNormalizedCoord(float nx, float ny,
-                                                                float fraction, final Rect cropRegion, int sensorOrientation) {
+    @SuppressWarnings("SuspiciousNameCombination")
+    public static MeteringRectangle[] regionsForNormalizedCoordinator(float nx, float ny,
+                                                                      float fraction,
+                                                                      final Rect cropRegion,
+                                                                      int sensorOrientation) {
         // Compute half side length in pixels.
         int minCropEdge = Math.min(cropRegion.width(), cropRegion.height());
         int halfSideLength = (int) (0.5f * fraction * minCropEdge);
@@ -108,7 +121,8 @@ public class AutoFocusHelper {
         meteringRegion.right = CameraUtil.clamp(meteringRegion.right, cropRegion.left, cropRegion.right);
         meteringRegion.bottom = CameraUtil.clamp(meteringRegion.bottom, cropRegion.top, cropRegion.bottom);
 
-        return new MeteringRectangle[]{new MeteringRectangle(meteringRegion, CAMERA2_REGION_WEIGHT)};
+        return new MeteringRectangle[]{new MeteringRectangle(meteringRegion,
+                MeteringRectangle.METERING_WEIGHT_MAX)};
     }
 
     /**
@@ -121,9 +135,11 @@ public class AutoFocusHelper {
      *
      * @return AE region(s).
      */
-    public static MeteringRectangle[] aeRegionsForNormalizedCoord(float nx,
-                                                                  float ny, final Rect cropRegion, int sensorOrientation) {
-        return regionsForNormalizedCoord(nx, ny, AE_REGION_BOX,
+    public static MeteringRectangle[] aeRegionsForNormalizedCoordinator(float nx,
+                                                                        float ny,
+                                                                        final Rect cropRegion,
+                                                                        int sensorOrientation) {
+        return regionsForNormalizedCoordinator(nx, ny, AE_REGION_BOX,
                 cropRegion, sensorOrientation);
     }
 
@@ -137,9 +153,11 @@ public class AutoFocusHelper {
      *
      * @return AF region(s).
      */
-    public static MeteringRectangle[] afRegionsForNormalizedCoord(float nx,
-                                                                  float ny, final Rect cropRegion, int sensorOrientation) {
-        return regionsForNormalizedCoord(nx, ny, AF_REGION_BOX,
+    public static MeteringRectangle[] afRegionsForNormalizedCoordinator(float nx,
+                                                                        float ny,
+                                                                        final Rect cropRegion,
+                                                                        int sensorOrientation) {
+        return regionsForNormalizedCoordinator(nx, ny, AF_REGION_BOX,
                 cropRegion, sensorOrientation);
     }
 }

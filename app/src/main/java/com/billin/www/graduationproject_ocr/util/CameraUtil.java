@@ -65,7 +65,7 @@ public class CameraUtil {
             case 270:
                 return new PointF(1.0f - ny, nx);
             default:
-                return null;
+                throw new RuntimeException("camera sensor orientation is invalidate");
         }
     }
 
