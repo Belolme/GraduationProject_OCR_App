@@ -34,3 +34,6 @@ proguard/
 .DS_Store
 /build
 /captures
+
+# opencv jniLib
+openCVLibrary310/src/main/jniLibs/*
