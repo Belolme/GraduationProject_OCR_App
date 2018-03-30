@@ -1,5 +1,7 @@
 package com.billin.www.graduationproject_ocr;
 
+import java.io.File;
+
 public interface CameraContract {
 
     interface View<P> {
@@ -8,7 +10,7 @@ public interface CameraContract {
 
     interface Presenter<V> {
 
-        void capturePhoto();
+        void capturePhoto(File file);
 
         void start();
 

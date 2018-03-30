@@ -568,7 +568,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                         new ImageReader.OnImageAvailableListener() {
                             @Override
                             public void onImageAvailable(ImageReader reader) {
-                                // This a callback object for the {@link ImageReader}.
+                                // This a OCRCallback object for the {@link ImageReader}.
                                 // "onImageAvailable" will be called when a
                                 // still image is ready to be saved.
                                 mBackgroundHandler.post(new ImageSaver(reader.acquireNextImage(), mFile));
@@ -1061,7 +1061,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
     /**
      * Saves a JPEG {@link Image} into the specified {@link File}.
      */
-    private static class ImageSaver implements Runnable {
+    private class ImageSaver implements Runnable {
 
         /**
          * The JPEG image
@@ -1086,6 +1086,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             try {
                 output = new FileOutputStream(mFile);
                 output.write(bytes);
+                mPresenter.capturePhoto(mFile);
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {

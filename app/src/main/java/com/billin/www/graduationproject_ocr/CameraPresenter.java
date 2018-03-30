@@ -1,6 +1,12 @@
 package com.billin.www.graduationproject_ocr;
 
+import android.util.Log;
+
+import java.io.File;
+
 public class CameraPresenter implements CameraContract.Presenter<CameraContract.View> {
+
+    private static final String TAG = "CameraPresenter";
 
     private CameraContract.View mView;
 
@@ -9,8 +15,8 @@ public class CameraPresenter implements CameraContract.Presenter<CameraContract.
     }
 
     @Override
-    public void capturePhoto() {
-
+    public void capturePhoto(File file) {
+        Log.d(TAG, "capturePhoto: " + file);
     }
 
     @Override
