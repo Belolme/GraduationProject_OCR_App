@@ -2,12 +2,14 @@ package com.billin.www.graduationproject_ocr.module.bean;
 
 import com.google.gson.annotations.SerializedName;
 
+import java.io.Serializable;
+
 /**
  * 最最顶层的返回结果 bean 类，仅仅有 logId
  * <p>
  * Created by billin on 2018/3/30.
  */
-public class GeneralOCRResult {
+public class GeneralOCRResult implements Serializable {
 
     @SerializedName("log_id")
     private long logId;

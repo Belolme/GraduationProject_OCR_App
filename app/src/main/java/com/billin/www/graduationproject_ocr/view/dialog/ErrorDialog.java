@@ -1,4 +1,4 @@
-package com.billin.www.graduationproject_ocr.dialog;
+package com.billin.www.graduationproject_ocr.view.dialog;
 
 import android.app.Activity;
 import android.app.AlertDialog;

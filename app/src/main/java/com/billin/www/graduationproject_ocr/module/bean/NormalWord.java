@@ -1,11 +1,13 @@
 package com.billin.www.graduationproject_ocr.module.bean;
 
+import java.io.Serializable;
+
 /**
  * 通用文字普通版的 data 字段
  * <p>
  * Created by billin on 2018/3/30.
  */
-public class NormalWord {
+public class NormalWord implements Serializable {
 
     private String words;
 

@@ -1,4 +1,4 @@
-package com.billin.www.graduationproject_ocr;
+package com.billin.www.graduationproject_ocr.camera;
 
 import java.io.File;
 

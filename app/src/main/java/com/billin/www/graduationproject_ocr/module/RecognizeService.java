@@ -1,6 +1,3 @@
-/*
- * Copyright (C) 2017 Baidu, Inc. All Rights Reserved.
- */
 package com.billin.www.graduationproject_ocr.module;
 
 import com.baidu.ocr.sdk.OCR;
@@ -134,9 +131,7 @@ public class RecognizeService {
                         result.getJsonRes(), new TypeToken<WordGeneralOCRResult<NormalWord>>() {
                         }.getType());
 
-
-
-
+                listener.onResult(res);
             }
 
             @Override

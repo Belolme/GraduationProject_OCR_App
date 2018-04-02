@@ -2,6 +2,7 @@ package com.billin.www.graduationproject_ocr.module.bean;
 
 import com.google.gson.annotations.SerializedName;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -9,7 +10,7 @@ import java.util.List;
  * <p>
  * Created by billin on 2018/3/30.
  */
-public class WordGeneralOCRResult<T> extends GeneralOCRResult {
+public class WordGeneralOCRResult<T> extends GeneralOCRResult implements Serializable {
 
     @SerializedName("direction")
     private int direction;

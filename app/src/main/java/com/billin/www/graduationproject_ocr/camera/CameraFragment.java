@@ -1,4 +1,4 @@
-package com.billin.www.graduationproject_ocr;
+package com.billin.www.graduationproject_ocr.camera;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -47,7 +47,8 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.Toast;
 
-import com.billin.www.graduationproject_ocr.dialog.ErrorDialog;
+import com.billin.www.graduationproject_ocr.R;
+import com.billin.www.graduationproject_ocr.view.dialog.ErrorDialog;
 import com.billin.www.graduationproject_ocr.util.AutoFocusHelper;
 import com.billin.www.graduationproject_ocr.view.AutoFitTextureView;
 import com.billin.www.graduationproject_ocr.view.TouchFocusFeedbackView;
@@ -357,7 +358,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
 
         @Override
         public void onOpened(@NonNull CameraDevice cameraDevice) {
-            // This method is called when the camera is opened.  We start camera preview here.
+            // This method is called when the camera is opened.  We onResume camera preview here.
             mCameraOpenCloseLock.release();
             mCameraDevice = cameraDevice;
             createCameraPreviewSession();
@@ -442,7 +443,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
 
         // When the screen is turned off and turned back on, the SurfaceTexture is already
         // available, and "onSurfaceTextureAvailable" will not be called. In that case, we can open
-        // a camera and start preview from here (otherwise, we wait until the surface is ready in
+        // a camera and onResume preview from here (otherwise, we wait until the surface is ready in
         // the SurfaceTextureListener).
         if (mTextureView.isAvailable()) {
             openCamera(mTextureView.getWidth(), mTextureView.getHeight());
@@ -838,7 +839,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             // We configure the size of default buffer to be the size of camera preview we want.
             texture.setDefaultBufferSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
 
-            // This is the output Surface we need to start preview.
+            // This is the output Surface we need to onResume preview.
             Surface surface = new Surface(texture);
 
             // We set up a CaptureRequest.Builder with the output Surface.
@@ -857,7 +858,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                                 return;
                             }
 
-                            // When the session is ready, we start displaying the preview.
+                            // When the session is ready, we onResume displaying the preview.
                             mCameraSession = cameraCaptureSession;
                             try {
                                 // Auto focus should be continuous for camera preview.
@@ -883,7 +884,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                                 // Flash is automatically enabled when necessary.
                                 setAutoFlash(mPreviewRequestBuilder);
 
-                                // Finally, we start displaying the camera preview.
+                                // Finally, we onResume displaying the camera preview.
                                 mPreviewRequest = mPreviewRequestBuilder.build();
                                 mCameraSession.setRepeatingRequest(mPreviewRequest,
                                         mCaptureCallback, mBackgroundHandler);
@@ -1001,7 +1002,6 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                                                @NonNull CaptureRequest request,
                                                @NonNull TotalCaptureResult result) {
                     showToast("Saved: " + mFile);
-                    Log.d(TAG, mFile.toString());
                     unlockFocus();
                 }
             };
