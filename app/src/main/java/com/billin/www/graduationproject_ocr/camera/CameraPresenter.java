@@ -1,15 +1,9 @@
 package com.billin.www.graduationproject_ocr.camera;
 
-import android.support.v4.app.Fragment;
-import android.widget.Toast;
 
-import com.baidu.ocr.sdk.exception.OCRError;
-import com.baidu.ocr.sdk.model.AccessToken;
-import com.billin.www.graduationproject_ocr.OCRState;
-import com.billin.www.graduationproject_ocr.module.callback.OCRCallback;
-import com.billin.www.graduationproject_ocr.module.ocrservice.OCRInitService;
-import com.billin.www.graduationproject_ocr.treatment.OCRTreatmentActivity;
-import com.billin.www.graduationproject_ocr.util.BitmapUtil;
+import android.support.v4.app.Fragment;
+
+import com.billin.www.graduationproject_ocr.confirm.ConfirmView;
 
 import java.io.File;
 
@@ -26,9 +20,18 @@ public class CameraPresenter implements CameraContract.Presenter<CameraContract.
     @Override
     public void capturePhoto(final File file) {
 
-        mView.showLoading(true);
+        ConfirmView.go(((Fragment) mView).getActivity(), file.getPath());
 
-        BitmapUtil.compressImage(file.getPath(), file.getPath(), 20);
+     /*   mView.showLoading(true);
+
+        if (!BitmapUtil.compressImage(file.getPath(), file.getPath(), 20)) {
+            Toast.makeText(((Fragment) mView).getContext(),
+                    "Something is wrong, Check your storage",
+                    Toast.LENGTH_SHORT)
+                    .show();
+
+            return;
+        }
 
         if (OCRState.getAccessToken() == null) {
             OCRInitService.getInstance()
@@ -60,7 +63,7 @@ public class CameraPresenter implements CameraContract.Presenter<CameraContract.
         }
 
         mView.showLoading(false);
-        OCRTreatmentActivity.go(((Fragment) mView).getActivity(), file.getPath());
+        OCRTreatmentActivity.go(((Fragment) mView).getActivity(), file.getPath());*/
     }
 
     @Override

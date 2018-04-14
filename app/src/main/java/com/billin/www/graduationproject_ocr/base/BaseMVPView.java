@@ -17,11 +17,18 @@ public abstract class BaseMVPView<V extends BaseMVPView<V, P>, P extends BasePre
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        initView();
+
         mPresenter = setupPresenter();
         mPresenter.setView((V) this);
 
         mPresenter.onStart();
     }
+
+    /**
+     * 必须在这个方法实现 {@link #setContentView} 方法
+     */
+    protected abstract void initView();
 
     protected abstract P setupPresenter();
 

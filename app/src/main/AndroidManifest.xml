@@ -26,6 +26,8 @@
 
         <activity android:name=".treatment.OCRTreatmentActivity" />
 
+        <activity android:name=".confirm.ConfirmView" />
+
     </application>
 
 </manifest>

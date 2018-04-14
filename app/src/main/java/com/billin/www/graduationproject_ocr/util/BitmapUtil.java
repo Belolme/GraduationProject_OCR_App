@@ -16,7 +16,17 @@ import java.io.IOException;
  */
 public class BitmapUtil {
 
-    public static String compressImage(String filePath, String targetPath, int quality) {
+    private static final String TAG = "BitmapUtil";
+
+    /**
+     * 压缩图片
+     *
+     * @param filePath   图片的位置
+     * @param targetPath 压缩后存放的位置
+     * @param quality    压缩的质量，其取值范围为 [0, 100]
+     * @return 是否压缩成功
+     */
+    public static boolean compressImage(String filePath, String targetPath, int quality) {
         //获取一定尺寸的图片
         Bitmap bm = getSmallBitmap(filePath);
 
@@ -29,20 +39,27 @@ public class BitmapUtil {
         }
 
         File outputFile = new File(targetPath);
+        FileOutputStream out = null;
         try {
-            if (!outputFile.exists()) {
-                outputFile.getParentFile().mkdirs();
-                //outputFile.createNewFile();
-            } else {
-                outputFile.delete();
+            if (!outputFile.getParentFile().exists() && !outputFile.getParentFile().mkdirs()) {
+                return false;
             }
 
-            FileOutputStream out = new FileOutputStream(outputFile);
+            out = new FileOutputStream(outputFile, false);
             bm.compress(Bitmap.CompressFormat.JPEG, quality, out);
         } catch (Exception e) {
             e.printStackTrace();
+        } finally {
+            if (out != null) {
+                try {
+                    out.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
-        return outputFile.getPath();
+
+        return true;
     }
 
     /**

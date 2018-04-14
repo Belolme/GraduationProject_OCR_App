@@ -3,8 +3,6 @@ package com.billin.www.graduationproject_ocr.treatment;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.BitmapFactory;
-import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.widget.EditText;
 import android.widget.ImageView;
 
@@ -31,15 +29,6 @@ public class OCRTreatmentActivity extends OCRTreatmentContract.View {
         context.startActivity(intent);
     }
 
-    @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_ocr_result_process);
-
-        initView();
-        init();
-    }
-
     private void init() {
         Intent intent = getIntent();
         String imgPath = intent.getStringExtra(KEY_IMG);
@@ -48,9 +37,13 @@ public class OCRTreatmentActivity extends OCRTreatmentContract.View {
         getPresenter().processOcrString(imgPath);
     }
 
-    private void initView() {
+    @Override
+    protected void initView() {
+        setContentView(R.layout.activity_ocr_result_process);
         mTextView = findViewById(R.id.ocr_process_edit_text);
         mPreviewView = findViewById(R.id.ocr_process_img_preview);
+
+        init();
     }
 
     @Override
