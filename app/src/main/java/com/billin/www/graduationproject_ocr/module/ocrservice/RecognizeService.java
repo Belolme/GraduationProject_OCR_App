@@ -1,4 +1,4 @@
-package com.billin.www.graduationproject_ocr.module;
+package com.billin.www.graduationproject_ocr.module.ocrservice;
 
 import com.baidu.ocr.sdk.OCR;
 import com.baidu.ocr.sdk.OnResultListener;
@@ -12,6 +12,7 @@ import com.baidu.ocr.sdk.model.OcrRequestParams;
 import com.baidu.ocr.sdk.model.OcrResponseResult;
 import com.baidu.ocr.sdk.model.Word;
 import com.baidu.ocr.sdk.model.WordSimple;
+import com.billin.www.graduationproject_ocr.module.callback.OCRCallback;
 import com.billin.www.graduationproject_ocr.module.bean.NormalWord;
 import com.billin.www.graduationproject_ocr.module.bean.WordGeneralOCRResult;
 import com.google.gson.Gson;

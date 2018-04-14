@@ -318,19 +318,19 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
 
         @Override
         public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
-            Log.d(TAG, "onCaptureStarted: " + request + " " + timestamp + " " + frameNumber);
+//            Log.d(TAG, "onCaptureStarted: " + request + " " + timestamp + " " + frameNumber);
             super.onCaptureStarted(session, request, timestamp, frameNumber);
         }
 
         @Override
         public void onCaptureSequenceAborted(@NonNull CameraCaptureSession session, int sequenceId) {
-            Log.d(TAG, "onCaptureSequenceAborted: ");
+//            Log.d(TAG, "onCaptureSequenceAborted: ");
             super.onCaptureSequenceAborted(session, sequenceId);
         }
 
         @Override
         public void onCaptureSequenceCompleted(@NonNull CameraCaptureSession session, int sequenceId, long frameNumber) {
-            Log.d(TAG, "onCaptureSequenceCompleted: ");
+//            Log.d(TAG, "onCaptureSequenceCompleted: ");
             super.onCaptureSequenceCompleted(session, sequenceId, frameNumber);
         }
 
@@ -338,7 +338,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
         public void onCaptureProgressed(@NonNull CameraCaptureSession session,
                                         @NonNull CaptureRequest request,
                                         @NonNull CaptureResult partialResult) {
-            Log.d(TAG, "onCaptureProgressed: ");
+//            Log.d(TAG, "onCaptureProgressed: ");
             process(partialResult);
         }
 
@@ -346,7 +346,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
         public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                        @NonNull CaptureRequest request,
                                        @NonNull TotalCaptureResult result) {
-            Log.d(TAG, "onCaptureCompleted: ");
+//            Log.d(TAG, "onCaptureCompleted: ");
             process(result);
         }
 
@@ -725,14 +725,14 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
      * Opens the camera specified by {@link CameraFragment#mCameraId}.
      */
     private void openCamera(int width, int height) {
-        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
-                != PackageManager.PERMISSION_GRANTED) {
-            requestCameraPermission();
+        Activity activity = getActivity();
+        if (activity == null) {
             return;
         }
 
-        Activity activity = getActivity();
-        if (activity == null) {
+        if (ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestCameraPermission();
             return;
         }
 
@@ -1001,8 +1001,12 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                                @NonNull CaptureRequest request,
                                                @NonNull TotalCaptureResult result) {
-                    showToast("Saved: " + mFile);
                     unlockFocus();
+
+                    // 放在这里不放在 ImageReader 那里的原因是当写完文件会马上执行 startActivity
+                    // 会导致调用 onPause 方法，最后才会调到这一个方法，所以当这一个方法执行的时候会
+                    // 导致 mPreviewSession 为 null, 从而导致崩溃
+                    mPresenter.capturePhoto(mFile);
                 }
             };
 
@@ -1086,7 +1090,6 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             try {
                 output = new FileOutputStream(mFile);
                 output.write(bytes);
-                mPresenter.capturePhoto(mFile);
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {

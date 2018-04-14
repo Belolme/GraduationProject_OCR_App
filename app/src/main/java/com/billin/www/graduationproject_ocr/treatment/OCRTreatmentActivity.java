@@ -25,7 +25,7 @@ public class OCRTreatmentActivity extends OCRTreatmentContract.View {
 
     private ImageView mPreviewView;
 
-    public static <T> void go(Context context, String imagePath) {
+    public static void go(Context context, String imagePath) {
         Intent intent = new Intent(context, OCRTreatmentActivity.class);
         intent.putExtra(KEY_IMG, imagePath);
         context.startActivity(intent);

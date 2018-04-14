@@ -3,10 +3,7 @@ package com.billin.www.graduationproject_ocr;
 import android.app.Application;
 import android.util.Log;
 
-import com.baidu.ocr.sdk.OCR;
-import com.baidu.ocr.sdk.OnResultListener;
-import com.baidu.ocr.sdk.exception.OCRError;
-import com.baidu.ocr.sdk.model.AccessToken;
+import com.billin.www.graduationproject_ocr.module.ocrservice.OCRInitService;
 
 import org.opencv.android.OpenCVLoader;
 
@@ -17,9 +14,13 @@ import org.opencv.android.OpenCVLoader;
  */
 public class MyApplication extends Application {
 
+    private static final String TAG = "MyApplication";
+
     @Override
     public void onCreate() {
         super.onCreate();
+
+        Log.d(TAG, "onCreate: ");
 
         initOpenCV();
         initBaiduOCR();
@@ -34,19 +35,6 @@ public class MyApplication extends Application {
     }
 
     private void initBaiduOCR() {
-        OCR.getInstance().initAccessTokenWithAkSk(new OnResultListener<AccessToken>() {
-            @Override
-            public void onResult(AccessToken result) {
-                String token = result.getAccessToken();
-            }
-
-            @Override
-            public void onError(OCRError error) {
-                error.printStackTrace();
-                Log.e(TAG, "onError: ", error);
-            }
-        }, getApplicationContext(), "0CXU3SvpPXo6VRVuy0130NCV", "0HBq2p8wfFbDUFcs5QFRbrveKn8P6yBj");
+        OCRInitService.getInstance().initService(this);
     }
-
-    private static final String TAG = "MyApplication";
 }
