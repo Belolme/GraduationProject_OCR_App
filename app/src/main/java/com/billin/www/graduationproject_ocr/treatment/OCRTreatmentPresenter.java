@@ -1,5 +1,13 @@
 package com.billin.www.graduationproject_ocr.treatment;
 
+import com.baidu.ocr.sdk.exception.OCRError;
+import com.billin.www.graduationproject_ocr.module.bean.NormalWord;
+import com.billin.www.graduationproject_ocr.module.bean.WordGeneralOCRResult;
+import com.billin.www.graduationproject_ocr.module.callback.OCRCallback;
+import com.billin.www.graduationproject_ocr.module.ocrservice.RecognizeService;
+
+import java.util.List;
+
 /**
  * 对 OCR Result 进行处理
  * <p>
@@ -32,8 +40,6 @@ public class OCRTreatmentPresenter extends OCRTreatmentContract.Presenter {
     @Override
     void processOcrString(String imgPath) {
 
-
-    /*
         RecognizeService.recGeneralBasic(imgPath,
                 new OCRCallback<WordGeneralOCRResult<NormalWord>>() {
                     @Override
@@ -52,7 +58,7 @@ public class OCRTreatmentPresenter extends OCRTreatmentContract.Presenter {
                     public void onError(OCRError error) {
 
                     }
-                });*/
+                });
     }
 
     @Override

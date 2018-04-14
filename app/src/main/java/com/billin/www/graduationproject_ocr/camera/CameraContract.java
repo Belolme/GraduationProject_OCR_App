@@ -6,6 +6,8 @@ public interface CameraContract {
 
     interface View<P> {
 
+        void showLoading(boolean show);
+
     }
 
     interface Presenter<V> {

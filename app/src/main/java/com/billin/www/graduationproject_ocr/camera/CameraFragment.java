@@ -5,6 +5,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
@@ -48,10 +49,10 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.billin.www.graduationproject_ocr.R;
-import com.billin.www.graduationproject_ocr.view.dialog.ErrorDialog;
 import com.billin.www.graduationproject_ocr.util.AutoFocusHelper;
 import com.billin.www.graduationproject_ocr.view.AutoFitTextureView;
 import com.billin.www.graduationproject_ocr.view.TouchFocusFeedbackView;
+import com.billin.www.graduationproject_ocr.view.dialog.ErrorDialog;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -127,6 +128,8 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
     }
 
     private Button mCaptureButton;
+
+    private ProgressDialog mLoadingDialog;
 
     private TouchFocusFeedbackView mTouchButton;
 
@@ -212,33 +215,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
      * Orientation of the camera sensor
      */
     private int mSensorOrientation;
-    /**
-     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
-     * {@link TextureView}.
-     */
-    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
-            = new TextureView.SurfaceTextureListener() {
 
-        @Override
-        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
-            openCamera(width, height);
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
-            configureTransform(width, height);
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
-            return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
-        }
-
-    };
     /**
      * A {@link CameraCaptureSession.CaptureCallback} that handles events related to JPEG capture.
      */
@@ -351,6 +328,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
         }
 
     };
+
     /**
      * {@link CameraDevice.StateCallback} is called when {@link CameraDevice} changes its state.
      */
@@ -380,6 +358,34 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
             if (null != activity) {
                 activity.finish();
             }
+        }
+
+    };
+
+    /**
+     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
+     * {@link TextureView}.
+     */
+    private final TextureView.SurfaceTextureListener mSurfaceTextureListener
+            = new TextureView.SurfaceTextureListener() {
+
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture texture, int width, int height) {
+            openCamera(width, height);
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture texture, int width, int height) {
+            configureTransform(width, height);
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture texture) {
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture texture) {
         }
 
     };
@@ -1062,48 +1068,20 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
         }
     }
 
-    /**
-     * Saves a JPEG {@link Image} into the specified {@link File}.
-     */
-    private class ImageSaver implements Runnable {
-
-        /**
-         * The JPEG image
-         */
-        private final Image mImage;
-        /**
-         * The file we save the image into.
-         */
-        private final File mFile;
-
-        ImageSaver(Image image, File file) {
-            mImage = image;
-            mFile = file;
+    @Override
+    public void showLoading(boolean show) {
+        if (mLoadingDialog != null && show) {
+            return;
+        } else if (!show && mLoadingDialog != null) {
+            mLoadingDialog.dismiss();
+            return;
         }
 
-        @Override
-        public void run() {
-            ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
-            byte[] bytes = new byte[buffer.remaining()];
-            buffer.get(bytes);
-            FileOutputStream output = null;
-            try {
-                output = new FileOutputStream(mFile);
-                output.write(bytes);
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                mImage.close();
-                if (null != output) {
-                    try {
-                        output.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-
+        mLoadingDialog = new ProgressDialog(getContext());
+        mLoadingDialog.setMessage("Loading...");
+        mLoadingDialog.setCancelable(false);
+        mLoadingDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        mLoadingDialog.show();
     }
 
     /**
@@ -1150,5 +1128,49 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                             })
                     .create();
         }
+    }
+
+    /**
+     * Saves a JPEG {@link Image} into the specified {@link File}.
+     */
+    private class ImageSaver implements Runnable {
+
+        /**
+         * The JPEG image
+         */
+        private final Image mImage;
+        /**
+         * The file we save the image into.
+         */
+        private final File mFile;
+
+        ImageSaver(Image image, File file) {
+            mImage = image;
+            mFile = file;
+        }
+
+        @Override
+        public void run() {
+            ByteBuffer buffer = mImage.getPlanes()[0].getBuffer();
+            byte[] bytes = new byte[buffer.remaining()];
+            buffer.get(bytes);
+            FileOutputStream output = null;
+            try {
+                output = new FileOutputStream(mFile);
+                output.write(bytes);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                mImage.close();
+                if (null != output) {
+                    try {
+                        output.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+
     }
 }
