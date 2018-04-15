@@ -8,9 +8,9 @@
         android:id="@+id/confirm_toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/transparent"
+        android:background="@color/colorPrimary"
         android:elevation="4dp"
-        android:theme="@style/ThemeOverlay.AppCompat.ActionBar"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:popupTheme="@style/ThemeOverlay.AppCompat.Light">
 
         <android.support.constraint.ConstraintLayout
@@ -21,7 +21,9 @@
                 android:id="@+id/confirm_check"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="16dp"
+                android:background="?android:attr/selectableItemBackground"
+                android:clickable="true"
                 android:src="@drawable/ic_check_black_24dp"
                 android:tint="@android:color/white"
                 app:layout_constraintBottom_toBottomOf="parent"
