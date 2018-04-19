@@ -20,7 +20,7 @@ public interface ConfirmPictureContract {
 
     abstract class Presenter extends BasePresenter<View> {
 
-        abstract void compress(int quantity);
+        abstract void compressAndShow(int quantity);
 
         abstract void confirm();
 

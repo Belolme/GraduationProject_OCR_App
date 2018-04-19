@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PointF;
@@ -57,16 +58,17 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
         mPoints = new PointF[4];
 
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mPaint.setStrokeWidth(5);
         mPaint.setColor(getResources().getColor(R.color.colorPrimary));
 
         mPath = new Path();
     }
 
     private void initPoint(int width, int height) {
-        mPoints[0] = new PointF(0, 0);
-        mPoints[1] = new PointF(width, 0);
-        mPoints[2] = new PointF(0, height);
-        mPoints[3] = new PointF(width, height);
+        mPoints[0] = new PointF(POINT_RADIUS, POINT_RADIUS);
+        mPoints[1] = new PointF(width - POINT_RADIUS, POINT_RADIUS);
+        mPoints[2] = new PointF(POINT_RADIUS, height - POINT_RADIUS);
+        mPoints[3] = new PointF(width - POINT_RADIUS, height - POINT_RADIUS);
     }
 
     @Override
@@ -135,6 +137,7 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
+        mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
         for (PointF point : mPoints) {
             canvas.drawOval(point.x - POINT_RADIUS,
                     point.y - POINT_RADIUS,
@@ -142,13 +145,75 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
                     point.y + POINT_RADIUS, mPaint);
         }
 
+        mPaint.setStyle(Paint.Style.STROKE);
+
         sortPoint();
         mPath.reset();
         mPath.moveTo(mPoints[0].x, mPoints[0].y);
         for (int i = 1; i < 4; i++) {
             mPath.lineTo(mPoints[i].x, mPoints[i].y);
         }
+        mPath.close();
         canvas.drawPath(mPath, mPaint);
+    }
+
+    /**
+     * 获取相对于图片坐标系的四个标注点坐标
+     */
+    public PointF[] getPointsInImage() {
+        Matrix matrix = getImageMatrix();
+
+        Matrix reverse = new Matrix();
+        if (!matrix.invert(reverse)) {
+            throw new RuntimeException("cannot reverse matrix");
+        }
+
+        sortPoint();
+
+        float[] srcPoint = mapToFloatArray(mPoints);
+        float[] dstPoint = new float[8];
+        reverse.mapPoints(dstPoint, srcPoint);
+
+        return mapToPointArray(dstPoint);
+    }
+
+    /**
+     * 在相对于图片的坐标系中设置四个绘制点
+     *
+     * @throws IllegalArgumentException 当 points 的数量不是四个的时候抛出此异常
+     */
+    public void setPointInImage(PointF[] points) {
+        if (points.length != 4) {
+            throw new IllegalArgumentException("invalidate points argument with length "
+                    + points.length);
+        }
+
+        Matrix matrix = getImageMatrix();
+
+        float[] dst = new float[8];
+        matrix.mapPoints(dst, mapToFloatArray(points));
+
+        mPoints = mapToPointArray(dst);
+        postInvalidate();
+    }
+
+    private float[] mapToFloatArray(PointF[] point) {
+        float[] floats = new float[point.length];
+        for (int i = 0; i < point.length; i++) {
+            floats[2 * i] = mPoints[i].x;
+            floats[2 * i + 1] = mPoints[i].y;
+        }
+
+        return floats;
+    }
+
+    private PointF[] mapToPointArray(float[] point) {
+        PointF[] dst = new PointF[point.length / 2];
+        for (int i = 0; i < point.length / 2; i++) {
+            dst[i] = new PointF(point[i * 2], point[i * 2 + 1]);
+        }
+
+        return dst;
     }
 
     /**
@@ -176,8 +241,8 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
             private double getR(PointF o) {
                 return o.equals(finalVertical) ? 2.0
                         : (o.x - finalVertical.x)
-                        / (Math.sqrt(Math.pow(o.x - finalVertical.x, 2))
-                        + Math.pow(o.y - finalVertical.y, 2));
+                        / (Math.sqrt(Math.pow(o.x - finalVertical.x, 2)
+                        + Math.pow(o.y - finalVertical.y, 2)));
             }
         });
     }

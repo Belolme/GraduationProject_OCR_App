@@ -31,11 +31,16 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
     private HandlerThread mHandlerThread;
 
     @Override
-    void compress(int quantity) {
+    void compressAndShow(int quantity) {
+        compressAndShowArea(quantity, false);
+    }
+
+    private void compressAndShowArea(int quantity, boolean showArea) {
         if (TextUtils.isEmpty(mOriginFilePath)) {
             return;
         }
 
+        getView().showLoading(true);
         String tmpTargetFilePath = null;
         int dotIndex = mOriginFilePath.length() - 1;
         for (int i = dotIndex; i >= 0; i--) {
@@ -62,6 +67,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
 
         mCompressedFilePath = tmpTargetFilePath;
         getView().showImage(mCompressedFilePath);
+        getView().showLoading(false);
     }
 
     @Override
@@ -123,7 +129,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
             return;
         }
         mOriginFilePath = filePath;
-        compress(50);
+        compressAndShowArea(50, true);
     }
 
     @Override

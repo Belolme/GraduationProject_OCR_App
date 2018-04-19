@@ -46,6 +46,7 @@ public class ConfirmView extends ConfirmPictureContract.View {
         mImageView = findViewById(R.id.confirm_image);
         mProgressBar = findViewById(R.id.confirm_progress);
 
+        // 设置 toolbar
         setSupportActionBar(mToolbar);
         ActionBar actionBar =  getSupportActionBar();
         if(actionBar != null) {
