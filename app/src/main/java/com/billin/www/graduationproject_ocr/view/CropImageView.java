@@ -25,6 +25,8 @@ import java.util.Comparator;
  */
 public class CropImageView extends android.support.v7.widget.AppCompatImageView {
 
+    private static final String TAG = "CropImageView";
+
     private static final float POINT_RADIUS
             = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP,
             12, Resources.getSystem().getDisplayMetrics());
@@ -33,7 +35,13 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
 
     private Path mPath;
 
-    private PointF[] mPoints;
+    private PointF[] mImageCoordinatePoints;
+
+    private PointF[] mViewCoordinatePoints;
+
+    private float[] mTmpPointCache;
+
+    private Matrix mTmpMatrix;
 
     private boolean mIsDragPoint;
 
@@ -55,7 +63,10 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
     }
 
     private void init() {
-        mPoints = new PointF[4];
+        mImageCoordinatePoints = new PointF[4];
+        mViewCoordinatePoints = new PointF[4];
+        mTmpPointCache = new float[8];
+        mTmpMatrix = new Matrix();
 
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setStrokeWidth(5);
@@ -65,10 +76,21 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
     }
 
     private void initPoint(int width, int height) {
-        mPoints[0] = new PointF(POINT_RADIUS, POINT_RADIUS);
-        mPoints[1] = new PointF(width - POINT_RADIUS, POINT_RADIUS);
-        mPoints[2] = new PointF(POINT_RADIUS, height - POINT_RADIUS);
-        mPoints[3] = new PointF(width - POINT_RADIUS, height - POINT_RADIUS);
+        // 当这个值不为空的时候，表示已经在外部设置了这个值, 需要做同步处理
+        if (mImageCoordinatePoints[0] != null) {
+            syncImageAndViewCoordinate(true);
+            return;
+        }
+
+        mImageCoordinatePoints[0] = new PointF(POINT_RADIUS, POINT_RADIUS);
+        mImageCoordinatePoints[1] = new PointF(width - POINT_RADIUS, POINT_RADIUS);
+        mImageCoordinatePoints[2] = new PointF(POINT_RADIUS, height - POINT_RADIUS);
+        mImageCoordinatePoints[3] = new PointF(width - POINT_RADIUS, height - POINT_RADIUS);
+
+        mViewCoordinatePoints[0] = new PointF(POINT_RADIUS, POINT_RADIUS);
+        mViewCoordinatePoints[1] = new PointF(width - POINT_RADIUS, POINT_RADIUS);
+        mViewCoordinatePoints[2] = new PointF(POINT_RADIUS, height - POINT_RADIUS);
+        mViewCoordinatePoints[3] = new PointF(width - POINT_RADIUS, height - POINT_RADIUS);
     }
 
     @Override
@@ -87,6 +109,7 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
         switch (event.getActionMasked()) {
 
             case MotionEvent.ACTION_DOWN:
+                syncImageAndViewCoordinate(true);
                 mDragPoint = getPointWithArea(x, y);
                 if (mDragPoint != null) {
                     mIsDragPoint = true;
@@ -98,11 +121,17 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
                 break;
 
             case MotionEvent.ACTION_MOVE:
-                if (!mIsDragPoint)
+                if (!mIsDragPoint
+                        || x < POINT_RADIUS
+                        || y < POINT_RADIUS
+                        || x > getWidth() - POINT_RADIUS
+                        || y > getHeight() - POINT_RADIUS)
                     return superRes;
 
                 mDragPoint.x = x;
                 mDragPoint.y = y;
+
+                syncImageAndViewCoordinate(false);
                 postInvalidate();
                 break;
 
@@ -110,6 +139,7 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
                 if (!mIsDragPoint)
                     return superRes;
 
+                syncImageAndViewCoordinate(false);
                 mIsDragPoint = false;
                 postInvalidate();
                 break;
@@ -119,13 +149,31 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
     }
 
     private PointF getPointWithArea(float x, float y) {
-        for (PointF pointF : mPoints) {
+        for (PointF pointF : mViewCoordinatePoints) {
             if (isWithinPointArea(pointF, x, y)) {
                 return pointF;
             }
         }
 
         return null;
+    }
+
+    /**
+     * 映射以图片为坐标系的点到以 View 为坐标系的点
+     *
+     * @param imageToView true 图片映射到 View, false View 映射到图片
+     */
+    private void syncImageAndViewCoordinate(boolean imageToView) {
+        if (imageToView) {
+            mapToFloatArray(mImageCoordinatePoints, mTmpPointCache);
+            getImageMatrix().mapPoints(mTmpPointCache);
+            mapToPointArray(mTmpPointCache, mViewCoordinatePoints);
+        } else {
+            mapToFloatArray(mViewCoordinatePoints, mTmpPointCache);
+            getImageMatrix().invert(mTmpMatrix);
+            mTmpMatrix.mapPoints(mTmpPointCache);
+            mapToPointArray(mTmpPointCache, mImageCoordinatePoints);
+        }
     }
 
     private boolean isWithinPointArea(PointF pointF, float x, float y) {
@@ -137,8 +185,12 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
+        int c = canvas.save();
+        if (getImageMatrix() != null)
+            canvas.concat(getImageMatrix());
+
         mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
-        for (PointF point : mPoints) {
+        for (PointF point : mImageCoordinatePoints) {
             canvas.drawOval(point.x - POINT_RADIUS,
                     point.y - POINT_RADIUS,
                     point.x + POINT_RADIUS,
@@ -147,14 +199,23 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
 
         mPaint.setStyle(Paint.Style.STROKE);
 
-        sortPoint();
+        sortPoint(mImageCoordinatePoints);
         mPath.reset();
-        mPath.moveTo(mPoints[0].x, mPoints[0].y);
+        mPath.moveTo(mImageCoordinatePoints[0].x, mImageCoordinatePoints[0].y);
         for (int i = 1; i < 4; i++) {
-            mPath.lineTo(mPoints[i].x, mPoints[i].y);
+            mPath.lineTo(mImageCoordinatePoints[i].x, mImageCoordinatePoints[i].y);
         }
         mPath.close();
         canvas.drawPath(mPath, mPaint);
+        canvas.restoreToCount(c);
+    }
+
+    /**
+     * 获取相对于 View 坐标系的四个标注点坐标
+     */
+    public PointF[] getPointInView() {
+        sortPoint(mViewCoordinatePoints);
+        return mImageCoordinatePoints;
     }
 
     /**
@@ -168,9 +229,9 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
             throw new RuntimeException("cannot reverse matrix");
         }
 
-        sortPoint();
+        sortPoint(mImageCoordinatePoints);
 
-        float[] srcPoint = mapToFloatArray(mPoints);
+        float[] srcPoint = mapToFloatArray(mImageCoordinatePoints);
         float[] dstPoint = new float[8];
         reverse.mapPoints(dstPoint, srcPoint);
 
@@ -188,51 +249,61 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
                     + points.length);
         }
 
-        Matrix matrix = getImageMatrix();
-
-        float[] dst = new float[8];
-        matrix.mapPoints(dst, mapToFloatArray(points));
-
-        mPoints = mapToPointArray(dst);
-        postInvalidate();
+        mImageCoordinatePoints = points;
+        syncImageAndViewCoordinate(true);
     }
 
     private float[] mapToFloatArray(PointF[] point) {
-        float[] floats = new float[point.length];
-        for (int i = 0; i < point.length; i++) {
-            floats[2 * i] = mPoints[i].x;
-            floats[2 * i + 1] = mPoints[i].y;
-        }
-
+        float[] floats = new float[point.length * 2];
+        mapToFloatArray(point, floats);
         return floats;
     }
 
+    private void mapToFloatArray(PointF[] src, float[] dst) {
+        for (int i = 0; i < src.length; i++) {
+            dst[2 * i] = src[i].x;
+            dst[2 * i + 1] = src[i].y;
+        }
+    }
+
+    /**
+     * 这一个方法把 float 表示的 point 数据转换为 PointF 表示的 point 数组
+     *
+     * @return 返回值是一个全新分配的内存空间的 PointF 数组
+     */
     private PointF[] mapToPointArray(float[] point) {
         PointF[] dst = new PointF[point.length / 2];
-        for (int i = 0; i < point.length / 2; i++) {
-            dst[i] = new PointF(point[i * 2], point[i * 2 + 1]);
-        }
-
+        mapToPointArray(point, dst);
         return dst;
+    }
+
+    /**
+     * 功能和 {@link #mapToFloatArray(PointF[])} 相同，不过这个函数没有返回值，
+     * 反之需要传入一个 PointF 数组用以获取转换后的结果
+     */
+    private void mapToPointArray(float[] src, PointF[] dst) {
+        for (int i = 0; i < src.length / 2; i++) {
+            dst[i] = new PointF(src[i * 2], src[i * 2 + 1]);
+        }
     }
 
     /**
      * 按逆时针排序四边形的点
      */
-    private void sortPoint() {
+    private void sortPoint(PointF[] points) {
 
         // 找到最底部的点并设置在第一位
-        for (int i = 1; i < mPoints.length; i++) {
-            if (mPoints[i].y > mPoints[0].y) {
-                PointF tmp = mPoints[i];
-                mPoints[i] = mPoints[0];
-                mPoints[0] = tmp;
+        for (int i = 1; i < points.length; i++) {
+            if (points[i].y > points[0].y) {
+                PointF tmp = points[i];
+                points[i] = points[0];
+                points[0] = tmp;
             }
         }
 
         // 逆时针扫描所有的点进行排序
-        final PointF finalVertical = mPoints[0];
-        Arrays.sort(mPoints, new Comparator<PointF>() {
+        final PointF finalVertical = points[0];
+        Arrays.sort(points, new Comparator<PointF>() {
             @Override
             public int compare(PointF o1, PointF o2) {
                 return Double.compare(getR(o1), getR(o2));

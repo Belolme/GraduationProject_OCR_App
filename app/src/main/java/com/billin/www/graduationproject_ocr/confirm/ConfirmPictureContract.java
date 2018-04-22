@@ -1,5 +1,7 @@
 package com.billin.www.graduationproject_ocr.confirm;
 
+import android.graphics.PointF;
+
 import com.billin.www.graduationproject_ocr.base.BaseMVPView;
 import com.billin.www.graduationproject_ocr.base.BasePresenter;
 
@@ -15,6 +17,16 @@ public interface ConfirmPictureContract {
         abstract void showImage(String filePath);
 
         abstract void showLoading(boolean show);
+
+        /**
+         * 获取相对于 view 坐标系的坐标点
+         */
+        abstract PointF[] getQuadrilateral();
+
+        /**
+         * 设置相对于图片坐标系的坐标点
+         */
+        abstract void setQuadrilateralInImage(PointF[] points);
 
     }
 

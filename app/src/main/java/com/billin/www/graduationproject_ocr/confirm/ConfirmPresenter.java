@@ -1,5 +1,6 @@
 package com.billin.www.graduationproject_ocr.confirm;
 
+import android.graphics.PointF;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.text.TextUtils;
@@ -12,6 +13,7 @@ import com.billin.www.graduationproject_ocr.module.callback.OCRCallback;
 import com.billin.www.graduationproject_ocr.module.ocrservice.OCRInitService;
 import com.billin.www.graduationproject_ocr.treatment.OCRTreatmentActivity;
 import com.billin.www.graduationproject_ocr.util.BitmapUtil;
+import com.billin.www.graduationproject_ocr.util.ImageProcessor;
 
 /**
  * 对图片进行预处理操作
@@ -29,6 +31,11 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
     private Handler mBackgroundHandler;
 
     private HandlerThread mHandlerThread;
+
+    /**
+     * 以显示 view 的坐标系为标准，处理完图片后需要将获得的点从图片坐标系转换为 view 的坐标系
+     */
+    private PointF[] mQuadrilateral;
 
     @Override
     void compressAndShow(int quantity) {
@@ -67,6 +74,13 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
 
         mCompressedFilePath = tmpTargetFilePath;
         getView().showImage(mCompressedFilePath);
+
+        if (showArea) {
+            PointF[] quadrilateral = ImageProcessor.getInstance().getQuadrilateral(mCompressedFilePath);
+            getView().setQuadrilateralInImage(quadrilateral);
+            mQuadrilateral = getView().getQuadrilateral();
+        }
+
         getView().showLoading(false);
     }
 
@@ -129,7 +143,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
             return;
         }
         mOriginFilePath = filePath;
-        compressAndShowArea(50, true);
+        compressAndShowArea(20, true);
     }
 
     @Override

@@ -3,7 +3,9 @@ package com.billin.www.graduationproject_ocr.confirm;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.net.Uri;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.PointF;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
@@ -11,6 +13,7 @@ import android.widget.ImageView;
 import android.widget.ProgressBar;
 
 import com.billin.www.graduationproject_ocr.R;
+import com.billin.www.graduationproject_ocr.view.CropImageView;
 
 /**
  * 图片边距裁剪与显示，图片质量调整
@@ -21,7 +24,7 @@ public class ConfirmView extends ConfirmPictureContract.View {
 
     public static final String KEY_FILE_PATH = "KEY FILE PATH";
 
-    private ImageView mImageView;
+    private CropImageView mImageView;
 
     private ImageView mCheckView;
 
@@ -48,8 +51,8 @@ public class ConfirmView extends ConfirmPictureContract.View {
 
         // 设置 toolbar
         setSupportActionBar(mToolbar);
-        ActionBar actionBar =  getSupportActionBar();
-        if(actionBar != null) {
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
             actionBar.setDisplayShowTitleEnabled(false);
         }
@@ -67,8 +70,11 @@ public class ConfirmView extends ConfirmPictureContract.View {
     }
 
     @Override
-    void showImage(String filePath) {
-        mImageView.setImageURI(Uri.parse(filePath));
+    void showImage(final String filePath) {
+        // 这里一定要用 setImageBitmap 方法，因为 setDrawable 方法生成的 Drawable 和
+        // 图片的尺寸不一致
+        Bitmap bitmap = BitmapFactory.decodeFile(filePath);
+        mImageView.setImageBitmap(bitmap);
     }
 
     @Override
@@ -85,5 +91,15 @@ public class ConfirmView extends ConfirmPictureContract.View {
         mLoadingDialog.setCancelable(false);
         mLoadingDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         mLoadingDialog.show();
+    }
+
+    @Override
+    PointF[] getQuadrilateral() {
+        return mImageView.getPointInView();
+    }
+
+    @Override
+    void setQuadrilateralInImage(PointF[] points) {
+        mImageView.setPointInImage(points);
     }
 }
