@@ -42,23 +42,28 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
         compressAndShowArea(quantity, false);
     }
 
+    private String concatImagePath(String src, String concat) {
+        String tmpTargetFilePath = null;
+        int dotIndex = mOriginFilePath.length() - 1;
+        for (int i = dotIndex; i >= 0; i--) {
+            if (mOriginFilePath.charAt(i) == '.') {
+                tmpTargetFilePath = mOriginFilePath.substring(0, i)
+                        + concat + mOriginFilePath.substring(i);
+                break;
+            }
+        }
+
+        return tmpTargetFilePath;
+    }
+
     private void compressAndShowArea(int quantity, boolean showArea) {
         if (TextUtils.isEmpty(mOriginFilePath)) {
             return;
         }
 
         getView().showLoading(true);
-        String tmpTargetFilePath = null;
-        int dotIndex = mOriginFilePath.length() - 1;
-        for (int i = dotIndex; i >= 0; i--) {
-            if (mOriginFilePath.charAt(i) == '.') {
-                tmpTargetFilePath = mOriginFilePath.substring(0, i)
-                        + "_tmp_"
-                        + quantity
-                        + mOriginFilePath.substring(i);
-                break;
-            }
-        }
+        String tmpTargetFilePath = concatImagePath(mOriginFilePath, "_tmp_".concat(String.valueOf(quantity)));
+
 
         if (tmpTargetFilePath == null)
             throw new RuntimeException("file path is invalidate");
@@ -88,6 +93,10 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
     void confirm() {
 
         getView().showLoading(true);
+
+        mQuadrilateral = getView().getQuadrilateral();
+
+        String cropImageFilePath = concatImagePath(mOriginFilePath, "_crop_");
 
         if (OCRState.getAccessToken() == null) {
             OCRInitService.getInstance()

@@ -95,7 +95,7 @@ public class ConfirmView extends ConfirmPictureContract.View {
 
     @Override
     PointF[] getQuadrilateral() {
-        return mImageView.getPointInView();
+        return mImageView.getPointsInImage();
     }
 
     @Override

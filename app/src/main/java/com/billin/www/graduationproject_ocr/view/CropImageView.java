@@ -222,20 +222,8 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
      * 获取相对于图片坐标系的四个标注点坐标
      */
     public PointF[] getPointsInImage() {
-        Matrix matrix = getImageMatrix();
-
-        Matrix reverse = new Matrix();
-        if (!matrix.invert(reverse)) {
-            throw new RuntimeException("cannot reverse matrix");
-        }
-
         sortPoint(mImageCoordinatePoints);
-
-        float[] srcPoint = mapToFloatArray(mImageCoordinatePoints);
-        float[] dstPoint = new float[8];
-        reverse.mapPoints(dstPoint, srcPoint);
-
-        return mapToPointArray(dstPoint);
+        return mImageCoordinatePoints;
     }
 
     /**

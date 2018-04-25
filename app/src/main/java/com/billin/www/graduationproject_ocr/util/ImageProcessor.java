@@ -67,6 +67,22 @@ public class ImageProcessor {
     }
 
     /**
+     * Transform the coordinates on the given Mat to correct the perspective.
+     *
+     * @param src A valid Mat
+     * @param points A list of coordinates from the given Mat to adjust the perspective
+     * @return A perspective transformed Mat
+     */
+    public Mat perspectiveTransform(Mat src, List<PointF> points) {
+        Point point1 = new Point(points.get(0).x, points.get(0).y);
+        Point point2 = new Point(points.get(1).x, points.get(1).y);
+        Point point3 = new Point(points.get(2).x, points.get(2).y);
+        Point point4 = new Point(points.get(3).x, points.get(3).y);
+        Point[] pts = {point1, point2, point3, point4};
+        return fourPointTransform(src, sortPoints(pts));
+    }
+
+    /**
      * Find the largest 4 point contour in the given Mat.
      *
      * @param src A valid Mat
@@ -287,8 +303,6 @@ public class ImageProcessor {
     private Mat fourPointTransform(Mat src, Point[] pts) {
 
         double ratio = src.size().height / 500;
-        int height = Double.valueOf(src.size().height / ratio).intValue();
-        int width = Double.valueOf(src.size().width / ratio).intValue();
 
         Point tl = pts[0];
         Point tr = pts[1];
