@@ -1,7 +1,9 @@
 package com.billin.www.graduationproject_ocr.util;
 
+import android.graphics.Bitmap;
 import android.graphics.PointF;
 
+import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint;
@@ -58,18 +60,35 @@ public class ImageProcessor {
             return result;
         } else {
 
-            for (int i = 0; i< 4; i++) {
-                result[i] = new PointF(0, 0);
-            }
+            result[0] = new PointF(0, 0);
+            result[1] = new PointF(image.width(), 0);
+            result[2] = new PointF(image.width(), image.height());
+            result[3] = new PointF(0, image.height());
 
             return result;
         }
     }
 
+    public Bitmap perspectiveTransform(Bitmap bitmap, PointF[] points) {
+        Mat src = new Mat(bitmap.getHeight(), bitmap.getWidth(), CvType.CV_8UC4);
+        Utils.bitmapToMat(bitmap, src);
+
+        Mat dst = fourPointTransform(src, sortPoints(new Point[]{
+                new Point(points[0].x, points[0].y),
+                new Point(points[1].x, points[1].y),
+                new Point(points[2].x, points[2].y),
+                new Point(points[3].x, points[3].y)
+        }));
+        Bitmap res = Bitmap.createBitmap(dst.width(), dst.height(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(dst, res);
+
+        return res;
+    }
+
     /**
      * Transform the coordinates on the given Mat to correct the perspective.
      *
-     * @param src A valid Mat
+     * @param src    A valid Mat
      * @param points A list of coordinates from the given Mat to adjust the perspective
      * @return A perspective transformed Mat
      */
@@ -121,6 +140,7 @@ public class ImageProcessor {
 
     /**
      * Detect the edges in the given Mat
+     *
      * @param src A valid Mat object
      * @return A Mat processed to find edges
      */
@@ -193,7 +213,7 @@ public class ImageProcessor {
         Comparator<Point> sumComparator = new Comparator<Point>() {
             @Override
             public int compare(Point lhs, Point rhs) {
-                return Double.valueOf(lhs.y + lhs.x).compareTo(rhs.y + rhs.x);
+                return Double.compare(lhs.y + lhs.x, rhs.y + rhs.x);
             }
         };
 
@@ -201,7 +221,7 @@ public class ImageProcessor {
 
             @Override
             public int compare(Point lhs, Point rhs) {
-                return Double.valueOf(lhs.y - lhs.x).compareTo(rhs.y - rhs.x);
+                return Double.compare(lhs.y - lhs.x, rhs.y - rhs.x);
             }
         };
 
@@ -302,7 +322,7 @@ public class ImageProcessor {
 
     private Mat fourPointTransform(Mat src, Point[] pts) {
 
-        double ratio = src.size().height / 500;
+        double ratio = 1;
 
         Point tl = pts[0];
         Point tr = pts[1];

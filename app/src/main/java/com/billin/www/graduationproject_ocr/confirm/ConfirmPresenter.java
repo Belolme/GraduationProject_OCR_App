@@ -1,5 +1,6 @@
 package com.billin.www.graduationproject_ocr.confirm;
 
+import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -14,6 +15,9 @@ import com.billin.www.graduationproject_ocr.module.ocrservice.OCRInitService;
 import com.billin.www.graduationproject_ocr.treatment.OCRTreatmentActivity;
 import com.billin.www.graduationproject_ocr.util.BitmapUtil;
 import com.billin.www.graduationproject_ocr.util.ImageProcessor;
+
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 
 /**
  * 对图片进行预处理操作
@@ -83,7 +87,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
         if (showArea) {
             PointF[] quadrilateral = ImageProcessor.getInstance().getQuadrilateral(mCompressedFilePath);
             getView().setQuadrilateralInImage(quadrilateral);
-            mQuadrilateral = getView().getQuadrilateral();
+            mQuadrilateral = getView().getQuadrilateralInImage();
         }
 
         getView().showLoading(false);
@@ -94,9 +98,19 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
 
         getView().showLoading(true);
 
-        mQuadrilateral = getView().getQuadrilateral();
+        mQuadrilateral = getView().getQuadrilateralInImage();
 
-        String cropImageFilePath = concatImagePath(mOriginFilePath, "_crop_");
+        final String cropImageFilePath = concatImagePath(mOriginFilePath, "_crop_");
+
+        Bitmap perspectiveBitmap = ImageProcessor.getInstance()
+                .perspectiveTransform(getView().getCurrentImage(), mQuadrilateral);
+
+        try {
+            perspectiveBitmap.compress(Bitmap.CompressFormat.JPEG, 100,
+                    new FileOutputStream(cropImageFilePath));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
 
         if (OCRState.getAccessToken() == null) {
             OCRInitService.getInstance()
@@ -105,8 +119,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
                         public void onResult(AccessToken data) {
                             getView().showLoading(false);
 
-                            OCRTreatmentActivity.go(getView(), mCompressedFilePath == null
-                                    ? mOriginFilePath : mCompressedFilePath);
+                            OCRTreatmentActivity.go(getView(), cropImageFilePath);
 
                             OCRInitService.getInstance().removeListener(this);
                         }
@@ -115,9 +128,8 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
                         public void onError(OCRError error) {
                             getView().showLoading(false);
 
-
-                            OCRTreatmentActivity.go(getView(), mCompressedFilePath == null
-                                    ? mOriginFilePath : mCompressedFilePath);
+                            Toast.makeText(getView(), "Check your network!!", Toast.LENGTH_SHORT)
+                                    .show();
 
                             OCRInitService.getInstance().removeListener(this);
                         }
@@ -128,8 +140,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
 
         getView().showLoading(false);
 
-        OCRTreatmentActivity.go(getView(), mCompressedFilePath == null
-                ? mOriginFilePath : mCompressedFilePath);
+        OCRTreatmentActivity.go(getView(), cropImageFilePath);
     }
 
     @Override
@@ -152,7 +163,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
             return;
         }
         mOriginFilePath = filePath;
-        compressAndShowArea(20, true);
+        compressAndShowArea(50, true);
     }
 
     @Override

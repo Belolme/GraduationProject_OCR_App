@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PointF;
+import android.graphics.drawable.BitmapDrawable;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
@@ -62,6 +63,14 @@ public class ConfirmView extends ConfirmPictureContract.View {
                 getPresenter().cancel();
             }
         });
+
+        // 设置 confirm 按钮点击监听
+        mCheckView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                getPresenter().confirm();
+            }
+        });
     }
 
     @Override
@@ -94,12 +103,17 @@ public class ConfirmView extends ConfirmPictureContract.View {
     }
 
     @Override
-    PointF[] getQuadrilateral() {
+    PointF[] getQuadrilateralInImage() {
         return mImageView.getPointsInImage();
     }
 
     @Override
     void setQuadrilateralInImage(PointF[] points) {
         mImageView.setPointInImage(points);
+    }
+
+    @Override
+    Bitmap getCurrentImage() {
+        return ((BitmapDrawable) mImageView.getDrawable()).getBitmap();
     }
 }
