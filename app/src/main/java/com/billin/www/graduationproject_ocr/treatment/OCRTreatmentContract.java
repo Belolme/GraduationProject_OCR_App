@@ -1,5 +1,8 @@
 package com.billin.www.graduationproject_ocr.treatment;
 
+
+import android.support.v7.widget.ShareActionProvider;
+
 import com.billin.www.graduationproject_ocr.base.BaseMVPView;
 import com.billin.www.graduationproject_ocr.base.BasePresenter;
 
@@ -16,24 +19,17 @@ public interface OCRTreatmentContract<T> {
 
         abstract void moveImageToLocation(int dx, int dy);
 
+        /**
+         * 获取界面显示的文字
+         */
+        abstract String getText();
     }
 
     abstract class Presenter extends BasePresenter<View> {
 
         abstract void processOcrString(String imgPath);
 
-        /**
-         * 用户处理完文字后回调这个接口
-         */
-        abstract void confirm(String res);
-
-        /**
-         * 用户不对这个结果进行处理
-         */
-        abstract void cancel();
-
         abstract void clickCharPos(int pos);
-
     }
 
 }

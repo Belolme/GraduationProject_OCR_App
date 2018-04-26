@@ -4,34 +4,50 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/ocr_process_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/colorPrimary"
+        android:elevation="4dp"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        app:layout_constraintTop_toTopOf="parent"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+
     <ImageView
         android:id="@+id/ocr_process_img_preview"
         android:layout_width="0dp"
         android:layout_height="206dp"
+        android:layout_marginTop="0dp"
+        android:background="#4C000000"
+        android:elevation="4dp"
+        android:scaleType="fitCenter"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        android:scaleType="fitCenter"
+        app:layout_constraintTop_toBottomOf="@+id/ocr_process_toolbar"
         app:srcCompat="@drawable/ic_launcher_background" />
 
     <ScrollView
         android:id="@+id/ocr_process_edit_text_container"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:layout_marginBottom="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginStart="8dp"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/ocr_process_img_preview"
-        app:layout_constraintVertical_bias="0.0">
+        app:layout_constraintVertical_bias="0.50">
 
         <EditText
             android:id="@+id/ocr_process_edit_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@android:color/transparent"
-            android:inputType="textMultiLine"
-            android:text="afdasdfafasfasdfasdfasfasfasdfsdfsfsafsaffasdfsff" />
+            android:hint="@string/in_processing"
+            android:inputType="textMultiLine" />
 
     </ScrollView>
 

@@ -9,8 +9,9 @@ import android.graphics.PointF;
 import android.graphics.drawable.BitmapDrawable;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.ImageView;
 import android.widget.ProgressBar;
 
 import com.billin.www.graduationproject_ocr.R;
@@ -26,8 +27,6 @@ public class ConfirmView extends ConfirmPictureContract.View {
     public static final String KEY_FILE_PATH = "KEY FILE PATH";
 
     private CropImageView mImageView;
-
-    private ImageView mCheckView;
 
     private ProgressBar mProgressBar;
 
@@ -46,7 +45,6 @@ public class ConfirmView extends ConfirmPictureContract.View {
         setContentView(R.layout.activity_confirm);
 
         mToolbar = findViewById(R.id.confirm_toolbar);
-        mCheckView = findViewById(R.id.confirm_check);
         mImageView = findViewById(R.id.confirm_image);
         mProgressBar = findViewById(R.id.confirm_progress);
 
@@ -61,14 +59,6 @@ public class ConfirmView extends ConfirmPictureContract.View {
             @Override
             public void onClick(View v) {
                 getPresenter().cancel();
-            }
-        });
-
-        // 设置 confirm 按钮点击监听
-        mCheckView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                getPresenter().confirm();
             }
         });
     }
@@ -115,5 +105,26 @@ public class ConfirmView extends ConfirmPictureContract.View {
     @Override
     Bitmap getCurrentImage() {
         return ((BitmapDrawable) mImageView.getDrawable()).getBitmap();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        getMenuInflater().inflate(R.menu.activity_confirm, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.confirm:
+                getPresenter().confirm();
+                break;
+
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+
+        return true;
     }
 }

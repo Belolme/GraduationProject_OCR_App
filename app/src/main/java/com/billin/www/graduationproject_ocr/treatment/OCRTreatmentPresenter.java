@@ -1,5 +1,8 @@
 package com.billin.www.graduationproject_ocr.treatment;
 
+import android.content.Intent;
+import android.support.v7.widget.ShareActionProvider;
+
 import com.baidu.ocr.sdk.exception.OCRError;
 import com.billin.www.graduationproject_ocr.module.bean.NormalWord;
 import com.billin.www.graduationproject_ocr.module.bean.WordGeneralOCRResult;
@@ -59,16 +62,6 @@ public class OCRTreatmentPresenter extends OCRTreatmentContract.Presenter {
 
                     }
                 });
-    }
-
-    @Override
-    void confirm(String res) {
-
-    }
-
-    @Override
-    void cancel() {
-
     }
 
     @Override
