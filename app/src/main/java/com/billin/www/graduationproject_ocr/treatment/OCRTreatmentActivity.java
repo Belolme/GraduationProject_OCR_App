@@ -47,7 +47,7 @@ public class OCRTreatmentActivity extends OCRTreatmentContract.View {
         String imgPath = intent.getStringExtra(KEY_IMG);
 
         mPreviewView.setImageBitmap(BitmapFactory.decodeFile(imgPath));
-//        getPresenter().processOcrString(imgPath);
+        getPresenter().processOcrString(imgPath);
     }
 
     @Override
