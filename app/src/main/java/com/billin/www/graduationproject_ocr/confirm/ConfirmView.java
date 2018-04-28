@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.PointF;
+import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.support.v7.app.ActionBar;
 import android.support.v7.widget.Toolbar;
@@ -26,6 +27,10 @@ public class ConfirmView extends ConfirmPictureContract.View {
 
     public static final String KEY_FILE_PATH = "KEY FILE PATH";
 
+    public static final String KEY_CAPTURE_RECT = "KEY CAPTURE RECT";
+
+    public static final String KEY_STYLE_TYPE = "KEY STYLE TYPE";
+
     private CropImageView mImageView;
 
     private ProgressBar mProgressBar;
@@ -34,9 +39,24 @@ public class ConfirmView extends ConfirmPictureContract.View {
 
     private ProgressDialog mLoadingDialog;
 
+    /**
+     * 普通照片的处理
+     */
     public static void go(Context context, String filePath) {
+        go(context, filePath, null, R.id.normal);
+    }
+
+    /**
+     * 依据类型对识别结果进行处理
+     *
+     * @param captureRect 图片中捕捉到需要裁剪的矩形
+     * @param style       分为 R.id.normal, R.id.id_card
+     */
+    public static void go(Context context, String filePath, RectF captureRect, int style) {
         Intent intent = new Intent(context, ConfirmView.class);
         intent.putExtra(KEY_FILE_PATH, filePath);
+        intent.putExtra(KEY_CAPTURE_RECT, captureRect);
+        intent.putExtra(KEY_STYLE_TYPE, style);
         context.startActivity(intent);
     }
 

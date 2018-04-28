@@ -2,6 +2,7 @@ package com.billin.www.graduationproject_ocr.confirm;
 
 import android.graphics.Bitmap;
 import android.graphics.PointF;
+import android.graphics.RectF;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.text.TextUtils;
@@ -10,6 +11,7 @@ import android.widget.Toast;
 import com.baidu.ocr.sdk.exception.OCRError;
 import com.baidu.ocr.sdk.model.AccessToken;
 import com.billin.www.graduationproject_ocr.OCRState;
+import com.billin.www.graduationproject_ocr.R;
 import com.billin.www.graduationproject_ocr.module.callback.OCRCallback;
 import com.billin.www.graduationproject_ocr.module.ocrservice.OCRInitService;
 import com.billin.www.graduationproject_ocr.treatment.OCRTreatmentActivity;
@@ -36,6 +38,8 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
 
     private HandlerThread mHandlerThread;
 
+    private int mStyle;
+
     /**
      * 以显示 view 的坐标系为标准，处理完图片后需要将获得的点从图片坐标系转换为 view 的坐标系
      */
@@ -43,7 +47,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
 
     @Override
     void compressAndShow(int quantity) {
-        compressAndShowArea(quantity, false);
+        compressAndShowArea(quantity, false, null);
     }
 
     private String concatImagePath(String src, String concat) {
@@ -60,7 +64,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
         return tmpTargetFilePath;
     }
 
-    private void compressAndShowArea(int quantity, boolean showArea) {
+    private void compressAndShowArea(int quantity, boolean showArea, RectF clip) {
         if (TextUtils.isEmpty(mOriginFilePath)) {
             return;
         }
@@ -75,7 +79,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
         // TODO: 2018/4/14 使用后台线程压缩图片
         // 压缩图片的时候应当显示 loading
         // 为了用户体验，进度条最多显示十个档次，已经压缩过的图片直接从缓冲中取出即可
-        if (!BitmapUtil.compressImage(mOriginFilePath, tmpTargetFilePath, quantity)) {
+        if (!BitmapUtil.compressImage(mOriginFilePath, tmpTargetFilePath, quantity, clip)) {
             Toast.makeText(getView(), "something is wrong, can't compress image",
                     Toast.LENGTH_SHORT).show();
             return;
@@ -148,6 +152,12 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
         getView().finish();
     }
 
+    private void preProcess(String filePath, RectF captureRect, int style) {
+        mOriginFilePath = filePath;
+        mStyle = style;
+        compressAndShowArea(100, true, captureRect);
+    }
+
     @Override
     public void onStart() {
         // 初始化图片处理的线程
@@ -155,15 +165,18 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
         mHandlerThread.start();
         mBackgroundHandler = new Handler(mHandlerThread.getLooper());
 
-        // 显示图片在界面上
         String filePath = getView().getIntent().getStringExtra(ConfirmView.KEY_FILE_PATH);
         if (filePath == null) {
             Toast.makeText(getView(), "Something was wrong, can't get image",
                     Toast.LENGTH_SHORT).show();
             return;
         }
-        mOriginFilePath = filePath;
-        compressAndShowArea(50, true);
+
+        RectF captureRect = getView().getIntent().getParcelableExtra(ConfirmView.KEY_CAPTURE_RECT);
+        int style = getView().getIntent().getIntExtra(ConfirmView.KEY_STYLE_TYPE, R.id.normal);
+
+        // 显示图片在界面上
+        preProcess(filePath, captureRect, style);
     }
 
     @Override

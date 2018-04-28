@@ -5,5 +5,7 @@
     <string name="request_permission">This sample needs camera permission.</string>
     <string name="camera_error">This device doesn\'t support Camera2 API.</string>
     <string name="share">Share</string>
-    <string name="in_processing">In the processing, please wait a minute...</string>
+    <string name="in_processing">In the processing, please wait a minute…</string>
+    <string name="normal">Normal</string>
+    <string name="id_card">ID card</string>
 </resources>

@@ -9,13 +9,17 @@ import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.content.res.Configuration;
+import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
+import android.graphics.drawable.ShapeDrawable;
+import android.graphics.drawable.shapes.RoundRectShape;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -36,10 +40,16 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.util.Size;
 import android.util.SparseIntArray;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
@@ -49,6 +59,7 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import com.billin.www.graduationproject_ocr.R;
+import com.billin.www.graduationproject_ocr.base.CardSizeRatio;
 import com.billin.www.graduationproject_ocr.util.AutoFocusHelper;
 import com.billin.www.graduationproject_ocr.view.AutoFitTextureView;
 import com.billin.www.graduationproject_ocr.view.TouchFocusFeedbackView;
@@ -63,6 +74,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -127,9 +139,17 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
         ORIENTATIONS.append(Surface.ROTATION_270, 180);
     }
 
+    private Toolbar mToolbar;
+
     private Button mCaptureButton;
 
     private ProgressDialog mLoadingDialog;
+
+    private View mMaskView;
+
+    private RectF mMaskRectOffset;
+
+    private int mStyle;
 
     private TouchFocusFeedbackView mTouchButton;
 
@@ -161,6 +181,11 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
      * The {@link Size} of camera preview.
      */
     private Size mPreviewSize;
+
+    /**
+     * The {@link Size} of captured image
+     */
+    private Size mImageSize;
 
     /**
      * An additional thread for running tasks that shouldn't block the UI.
@@ -499,18 +524,55 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
 
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
+        mToolbar = view.findViewById(R.id.camera_toolbar);
         mCaptureButton = view.findViewById(R.id.camera_capture_btn);
         mTextureView = view.findViewById(R.id.camera_texture);
         mTouchButton = view.findViewById(R.id.camera_touch_btn);
+        mMaskView = view.findViewById(R.id.camera_mask);
 
+        // setting toolbar
+        setHasOptionsMenu(true);
+        ((AppCompatActivity) requireActivity()).setSupportActionBar(mToolbar);
+
+        // setting capture button style
         mCaptureButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 takePicture();
             }
         });
+        mCaptureButton.getBackground().setTintList(new ColorStateList(
+                new int[][]{
+                        new int[]{android.R.attr.state_pressed},
+                        new int[]{-android.R.attr.state_pressed}
+                },
+                new int[]{
+                        getResources().getColor(R.color.colorPrimary),
+                        Color.parseColor("#99FFFFFF"),
+                }));
 
         mPresenter.start();
+        mPresenter.switchRecognizeType(R.id.normal);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.activity_camera, menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.normal:
+            case R.id.id_card:
+                mPresenter.switchRecognizeType(item.getItemId());
+                break;
+
+            default:
+                return false;
+        }
+
+        return true;
     }
 
     @Override
@@ -569,6 +631,7 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                 Size largest = Collections.max(
                         Arrays.asList(map.getOutputSizes(ImageFormat.JPEG)),
                         new CompareSizesByArea());
+                mImageSize = largest;
                 mImageReader = ImageReader.newInstance(largest.getWidth(), largest.getHeight(),
                         ImageFormat.JPEG, /*maxImages*/2);
                 mImageReader.setOnImageAvailableListener(
@@ -1012,7 +1075,24 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
                     // 放在这里不放在 ImageReader 那里的原因是当写完文件会马上执行 startActivity
                     // 会导致调用 onPause 方法，最后才会调到这一个方法，所以当这一个方法执行的时候会
                     // 导致 mPreviewSession 为 null, 从而导致崩溃
-                    mPresenter.capturePhoto(mFile);
+                    if (mStyle == R.id.normal) {
+                        mPresenter.capturePhoto(mFile, null);
+                    } else if (mStyle == R.id.id_card) {
+
+                        Matrix matrix = new Matrix();
+                        matrix.setRectToRect(new RectF(0, 0, mMaskView.getWidth(), mMaskView.getHeight()),
+                                new RectF(0, 0, mImageSize.getWidth(), mImageSize.getHeight()),
+                                Matrix.ScaleToFit.FILL);
+
+                        RectF res = new RectF(mMaskRectOffset.left, mMaskRectOffset.top,
+                                mMaskView.getWidth() - mMaskRectOffset.right,
+                                mMaskView.getHeight() - mMaskRectOffset.bottom);
+                        matrix.mapRect(res);
+
+                        // TODO: 2018/4/28 todo 兼容竖屏
+
+                        mPresenter.capturePhoto(mFile, res);
+                    }
                 }
             };
 
@@ -1082,6 +1162,68 @@ public class CameraFragment extends Fragment implements CameraContract.View<Came
         mLoadingDialog.setCancelable(false);
         mLoadingDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
         mLoadingDialog.show();
+    }
+
+    private void setupMaskDrawable(int style) {
+
+        CardSizeRatio cardSizeRatio = null;
+        if (style == R.id.normal) {
+            mMaskView.setBackground(null);
+            return;
+        } else if (style == R.id.id_card) {
+            // setting mask view
+            cardSizeRatio = CardSizeRatio.ID_CARD;
+        } else {
+            mMaskView.setBackground(null);
+            return;
+        }
+
+        // setting mask drawable
+        final CardSizeRatio finalCardSizeRatio = cardSizeRatio;
+        mMaskView.post(new Runnable() {
+            @Override
+            public void run() {
+                TypedValue typedValue = new TypedValue();
+                if (requireActivity().getTheme().resolveAttribute(android.R.attr.actionBarSize,
+                        typedValue, true)) {
+
+                    int toolbarHeight = TypedValue.complexToDimensionPixelSize(
+                            typedValue.data, getResources().getDisplayMetrics());
+                    int viewHeight = mMaskView.getHeight();
+                    int viewWidth = mMaskView.getWidth();
+
+                    ShapeDrawable maskDrawable;
+                    int widthOffset;
+                    int orientation = getResources().getConfiguration().orientation;
+                    if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                        widthOffset = (viewWidth - finalCardSizeRatio.getWidth(viewHeight - 2 * toolbarHeight)) / 2;
+                    } else {
+                        //noinspection SuspiciousNameCombination
+                        widthOffset = (viewWidth - finalCardSizeRatio.getHeight(viewHeight - 2 * toolbarHeight)) / 2;
+                    }
+
+                    mMaskRectOffset = new RectF(widthOffset, toolbarHeight, widthOffset, toolbarHeight);
+                    maskDrawable = new ShapeDrawable(new RoundRectShape(null, mMaskRectOffset, null));
+                    maskDrawable.setAlpha(0x4C);
+
+                    mMaskView.setBackground(maskDrawable);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void showStyle(int styleId) {
+        mStyle = styleId;
+
+        setupMaskDrawable(styleId);
+        if (styleId == R.id.id_card) {
+            Objects.requireNonNull(((AppCompatActivity) requireActivity()).getSupportActionBar())
+                    .setTitle(R.string.id_card);
+        } else if (styleId == R.id.normal) {
+            Objects.requireNonNull(((AppCompatActivity) requireActivity()).getSupportActionBar())
+                    .setTitle(R.string.normal);
+        }
     }
 
     /**

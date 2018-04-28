@@ -3,6 +3,7 @@ package com.billin.www.graduationproject_ocr.util;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.graphics.RectF;
 import android.media.ExifInterface;
 
 import java.io.File;
@@ -18,17 +19,9 @@ public class BitmapUtil {
 
     private static final String TAG = "BitmapUtil";
 
-    /**
-     * 压缩图片
-     *
-     * @param filePath   图片的位置
-     * @param targetPath 压缩后存放的位置
-     * @param quality    压缩的质量，其取值范围为 [0, 100]
-     * @return 是否压缩成功
-     */
-    public static boolean compressImage(String filePath, String targetPath, int quality) {
+    public static boolean compressImage(String filePath, String targetPath, int quality, RectF clip) {
         //获取一定尺寸的图片
-        Bitmap bm = getSmallBitmap(filePath);
+        Bitmap bm = getSmallBitmap(filePath, clip);
 
         //获取相片拍摄角度
         int degree = readPictureDegree(filePath);
@@ -63,9 +56,21 @@ public class BitmapUtil {
     }
 
     /**
+     * 压缩图片
+     *
+     * @param filePath   图片的位置
+     * @param targetPath 压缩后存放的位置
+     * @param quality    压缩的质量，其取值范围为 [0, 100]
+     * @return 是否压缩成功
+     */
+    public static boolean compressImage(String filePath, String targetPath, int quality) {
+        return compressImage(filePath, targetPath, quality, null);
+    }
+
+    /**
      * 根据路径获得图片信息并按比例压缩，返回bitmap
      */
-    public static Bitmap getSmallBitmap(String filePath) {
+    public static Bitmap getSmallBitmap(String filePath, RectF clip) {
         final BitmapFactory.Options options = new BitmapFactory.Options();
 
         //只解析图片边沿，获取宽高
@@ -77,7 +82,20 @@ public class BitmapUtil {
 
         // 完整解析图片返回bitmap
         options.inJustDecodeBounds = false;
-        return BitmapFactory.decodeFile(filePath, options);
+
+        Bitmap src = BitmapFactory.decodeFile(filePath, options);
+
+        if (clip != null) {
+            Matrix matrix = new Matrix();
+            matrix.setScale(1f / options.inSampleSize, 1f / options.inSampleSize);
+
+            RectF dstClip = new RectF();
+            matrix.mapRect(dstClip, clip);
+            return Bitmap.createBitmap(src, (int) dstClip.left, (int) dstClip.top,
+                    (int) dstClip.width(), (int) dstClip.height());
+        } else {
+            return src;
+        }
     }
 
 

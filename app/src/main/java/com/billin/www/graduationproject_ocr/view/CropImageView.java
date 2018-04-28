@@ -3,6 +3,7 @@ package com.billin.www.graduationproject_ocr.view;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
@@ -71,6 +72,7 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setStrokeWidth(5);
         mPaint.setColor(getResources().getColor(R.color.colorPrimary));
+        mPaint.setAlpha(0x99);
 
         mPath = new Path();
     }
@@ -109,7 +111,7 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
         switch (event.getActionMasked()) {
 
             case MotionEvent.ACTION_DOWN:
-                syncImageAndViewCoordinate(true);
+                syncImageAndViewCoordinate(false);
                 mDragPoint = getPointWithArea(x, y);
                 if (mDragPoint != null) {
                     mIsDragPoint = true;
@@ -121,11 +123,7 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
                 break;
 
             case MotionEvent.ACTION_MOVE:
-                if (!mIsDragPoint
-                        || x < POINT_RADIUS
-                        || y < POINT_RADIUS
-                        || x > getWidth() - POINT_RADIUS
-                        || y > getHeight() - POINT_RADIUS)
+                if (!mIsDragPoint || x < 0 || y < 0 || x > getWidth() || y > getHeight())
                     return superRes;
 
                 mDragPoint.x = x;
@@ -186,11 +184,11 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
         super.onDraw(canvas);
 
         int c = canvas.save();
-        if (getImageMatrix() != null)
-            canvas.concat(getImageMatrix());
+//        if (getImageMatrix() != null)
+//            canvas.concat(getImageMatrix());
 
         mPaint.setStyle(Paint.Style.FILL_AND_STROKE);
-        for (PointF point : mImageCoordinatePoints) {
+        for (PointF point : mViewCoordinatePoints) {
             canvas.drawOval(point.x - POINT_RADIUS,
                     point.y - POINT_RADIUS,
                     point.x + POINT_RADIUS,
@@ -199,11 +197,11 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
 
         mPaint.setStyle(Paint.Style.STROKE);
 
-        sortPoint(mImageCoordinatePoints);
+        sortPoint(mViewCoordinatePoints);
         mPath.reset();
-        mPath.moveTo(mImageCoordinatePoints[0].x, mImageCoordinatePoints[0].y);
+        mPath.moveTo(mViewCoordinatePoints[0].x, mViewCoordinatePoints[0].y);
         for (int i = 1; i < 4; i++) {
-            mPath.lineTo(mImageCoordinatePoints[i].x, mImageCoordinatePoints[i].y);
+            mPath.lineTo(mViewCoordinatePoints[i].x, mViewCoordinatePoints[i].y);
         }
         mPath.close();
         canvas.drawPath(mPath, mPaint);
@@ -241,28 +239,11 @@ public class CropImageView extends android.support.v7.widget.AppCompatImageView 
         syncImageAndViewCoordinate(true);
     }
 
-    private float[] mapToFloatArray(PointF[] point) {
-        float[] floats = new float[point.length * 2];
-        mapToFloatArray(point, floats);
-        return floats;
-    }
-
     private void mapToFloatArray(PointF[] src, float[] dst) {
         for (int i = 0; i < src.length; i++) {
             dst[2 * i] = src[i].x;
             dst[2 * i + 1] = src[i].y;
         }
-    }
-
-    /**
-     * 这一个方法把 float 表示的 point 数据转换为 PointF 表示的 point 数组
-     *
-     * @return 返回值是一个全新分配的内存空间的 PointF 数组
-     */
-    private PointF[] mapToPointArray(float[] point) {
-        PointF[] dst = new PointF[point.length / 2];
-        mapToPointArray(point, dst);
-        return dst;
     }
 
     /**

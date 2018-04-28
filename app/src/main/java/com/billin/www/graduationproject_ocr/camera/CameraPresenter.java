@@ -1,6 +1,8 @@
 package com.billin.www.graduationproject_ocr.camera;
 
 
+import android.graphics.RectF;
+import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 
 import com.billin.www.graduationproject_ocr.confirm.ConfirmView;
@@ -13,57 +15,21 @@ public class CameraPresenter implements CameraContract.Presenter<CameraContract.
 
     private CameraContract.View mView;
 
+    private int mStyle;
+
     public void setView(CameraContract.View view) {
         this.mView = view;
     }
 
     @Override
-    public void capturePhoto(final File file) {
+    public void capturePhoto(final File file, @Nullable RectF rectPointInImage) {
+        ConfirmView.go(((Fragment) mView).getActivity(), file.getPath(), rectPointInImage, mStyle);
+    }
 
-        ConfirmView.go(((Fragment) mView).getActivity(), file.getPath());
-
-     /*   mView.showLoading(true);
-
-        if (!BitmapUtil.compressImage(file.getPath(), file.getPath(), 20)) {
-            Toast.makeText(((Fragment) mView).getContext(),
-                    "Something is wrong, Check your storage",
-                    Toast.LENGTH_SHORT)
-                    .show();
-
-            return;
-        }
-
-        if (OCRState.getAccessToken() == null) {
-            OCRInitService.getInstance()
-                    .addListener(new OCRCallback<AccessToken>() {
-                        @Override
-                        public void onResult(AccessToken data) {
-                            mView.showLoading(false);
-
-                            OCRTreatmentActivity.go(((Fragment) mView).getActivity(),
-                                    file.getPath());
-
-                            OCRInitService.getInstance().removeListener(this);
-                        }
-
-                        @Override
-                        public void onError(OCRError error) {
-                            mView.showLoading(false);
-
-                            Toast.makeText(((Fragment) mView).getContext(),
-                                    "Something is wrong, Check your network",
-                                    Toast.LENGTH_SHORT)
-                                    .show();
-
-                            OCRInitService.getInstance().removeListener(this);
-                        }
-                    });
-
-            return;
-        }
-
-        mView.showLoading(false);
-        OCRTreatmentActivity.go(((Fragment) mView).getActivity(), file.getPath());*/
+    @Override
+    public void switchRecognizeType(int typeId) {
+        mStyle = typeId;
+        mView.showStyle(mStyle);
     }
 
     @Override

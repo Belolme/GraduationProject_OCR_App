@@ -4,6 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <android.support.v7.widget.Toolbar
+        android:id="@+id/camera_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@android:color/transparent"
+        android:elevation="4dp"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        app:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
+
     <com.billin.www.graduationproject_ocr.view.AutoFitTextureView
         android:id="@+id/camera_texture"
         android:layout_width="wrap_content"
@@ -12,6 +21,15 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <View
+        android:id="@+id/camera_mask"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="@+id/camera_texture"
+        app:layout_constraintEnd_toEndOf="@+id/camera_texture"
+        app:layout_constraintStart_toStartOf="@+id/camera_texture"
+        app:layout_constraintTop_toTopOf="@+id/camera_texture" />
+
     <Button
         android:id="@+id/camera_capture_btn"
         android:layout_width="64dp"
@@ -19,7 +37,8 @@
         android:layout_marginBottom="32dp"
         android:layout_marginEnd="8dp"
         android:layout_marginStart="8dp"
-        android:background="@android:drawable/presence_online"
+        android:background="@drawable/ic_camera_black_24dp"
+        android:backgroundTint="#99ffffff"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
