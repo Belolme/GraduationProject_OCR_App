@@ -123,7 +123,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
                         public void onResult(AccessToken data) {
                             getView().showLoading(false);
 
-                            OCRTreatmentActivity.go(getView(), cropImageFilePath);
+                            OCRTreatmentActivity.go(getView(), cropImageFilePath, mStyle);
 
                             OCRInitService.getInstance().removeListener(this);
                         }
@@ -144,7 +144,7 @@ public class ConfirmPresenter extends ConfirmPictureContract.Presenter {
 
         getView().showLoading(false);
 
-        OCRTreatmentActivity.go(getView(), cropImageFilePath);
+        OCRTreatmentActivity.go(getView(), cropImageFilePath, mStyle);
     }
 
     @Override

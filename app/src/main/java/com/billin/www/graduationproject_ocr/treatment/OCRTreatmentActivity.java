@@ -26,6 +26,8 @@ public class OCRTreatmentActivity extends OCRTreatmentContract.View {
 
     private static final String KEY_IMG = "OCR RESULT";
 
+    private static final String KEY_STYLE = "OCR STYLE";
+
     private static final String OCR_RESULT_DATA_TYPE = "OCR_RESULT_DATA_TYPE";
 
     private EditText mTextView;
@@ -37,17 +39,23 @@ public class OCRTreatmentActivity extends OCRTreatmentContract.View {
     private ShareActionProvider mShareActionProvider;
 
     public static void go(Context context, String imagePath) {
+        go(context, imagePath, R.id.normal);
+    }
+
+    public static void go(Context context, String imagePath, int style) {
         Intent intent = new Intent(context, OCRTreatmentActivity.class);
         intent.putExtra(KEY_IMG, imagePath);
+        intent.putExtra(KEY_STYLE, style);
         context.startActivity(intent);
     }
 
     private void initPresenter() {
         Intent intent = getIntent();
         String imgPath = intent.getStringExtra(KEY_IMG);
+        int style = intent.getIntExtra(KEY_STYLE, R.id.normal);
 
         mPreviewView.setImageBitmap(BitmapFactory.decodeFile(imgPath));
-        getPresenter().processOcrString(imgPath);
+        getPresenter().processOcrString(imgPath, style);
     }
 
     @Override

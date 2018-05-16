@@ -8,13 +8,15 @@ import com.baidu.ocr.sdk.model.BankCardResult;
 import com.baidu.ocr.sdk.model.GeneralBasicParams;
 import com.baidu.ocr.sdk.model.GeneralParams;
 import com.baidu.ocr.sdk.model.GeneralResult;
+import com.baidu.ocr.sdk.model.IDCardParams;
+import com.baidu.ocr.sdk.model.IDCardResult;
 import com.baidu.ocr.sdk.model.OcrRequestParams;
 import com.baidu.ocr.sdk.model.OcrResponseResult;
 import com.baidu.ocr.sdk.model.Word;
 import com.baidu.ocr.sdk.model.WordSimple;
-import com.billin.www.graduationproject_ocr.module.callback.OCRCallback;
 import com.billin.www.graduationproject_ocr.module.bean.NormalWord;
 import com.billin.www.graduationproject_ocr.module.bean.WordGeneralOCRResult;
+import com.billin.www.graduationproject_ocr.module.callback.OCRCallback;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -308,6 +310,30 @@ public class RecognizeService {
             @Override
             public void onError(OCRError error) {
                 listener.onResult(error.getMessage());
+            }
+        });
+    }
+
+    public static void recIDCard(String filePath,
+                                 final OCRCallback<IDCardResult> listener) {
+        IDCardParams param = new IDCardParams();
+        param.setImageFile(new File(filePath));
+        // 设置身份证正反面
+        param.setIdCardSide(IDCardParams.ID_CARD_SIDE_FRONT);
+        // 设置方向检测
+        param.setDetectDirection(true);
+        // 设置图像参数压缩质量0-100, 越大图像质量越好但是请求时间越长。 不设置则默认值为20
+        param.setImageQuality(20);
+
+        OCR.getInstance().recognizeIDCard(param, new OnResultListener<IDCardResult>() {
+            @Override
+            public void onResult(IDCardResult result) {
+                listener.onResult(result);
+            }
+
+            @Override
+            public void onError(OCRError error) {
+                listener.onError(error);
             }
         });
     }
